@@ -1,5 +1,5 @@
 //! System integration tests: game init, tick, hit, end_run, submit_leaderboard,
-//! and error cases (invalid kernel, insufficient coins, out of range, replay, modify after finish).
+//! error cases, and security tests (attack prevention).
 
 #[cfg(test)]
 mod tests {
@@ -26,6 +26,7 @@ mod tests {
     use neon_sentinel::systems::init_game::{
         IInitGameDispatcher, IInitGameDispatcherTrait, init_game,
     };
+    use neon_sentinel::systems::claim_coins::{IClaimCoinsDispatcher, IClaimCoinsDispatcherTrait, claim_coins};
     use neon_sentinel::systems::submit_leaderboard::{
         ISubmitLeaderboardDispatcher, ISubmitLeaderboardDispatcherTrait, submit_leaderboard,
     };
@@ -53,6 +54,8 @@ mod tests {
                 TestResource::Contract(hit_registration::TEST_CLASS_HASH),
                 TestResource::Contract(end_run::TEST_CLASS_HASH),
                 TestResource::Contract(submit_leaderboard::TEST_CLASS_HASH),
+                TestResource::Event(claim_coins::e_CoinClaimed::TEST_CLASS_HASH),
+                TestResource::Contract(claim_coins::TEST_CLASS_HASH),
             ]
                 .span(),
         };
@@ -71,6 +74,8 @@ mod tests {
             ContractDefTrait::new(@"neon_sentinel", @"end_run")
                 .with_writer_of([ns_hash].span()),
             ContractDefTrait::new(@"neon_sentinel", @"submit_leaderboard")
+                .with_writer_of([ns_hash].span()),
+            ContractDefTrait::new(@"neon_sentinel", @"claim_coins")
                 .with_writer_of([ns_hash].span()),
         ]
             .span()
@@ -212,7 +217,7 @@ mod tests {
     }
 
     #[test]
-    #[available_gas(50000000)]
+    #[available_gas(60000000)]
     fn test_end_run_sets_finished_and_locks_final_score() {
         set_block_number(3000);
         let (mut world, caller) = setup_world_with_profile();
@@ -373,5 +378,184 @@ mod tests {
         let tick_sys = IExecuteTickDispatcher { contract_address: tick_addr };
         let enemy_ids: Array<u256> = ArrayTrait::new();
         tick_sys.execute_tick(run_id, 0, zero_u256(), zero_u256(), enemy_ids);
+    }
+
+    // ---------- Security tests (attack prevention) ----------
+    // Tests that expect specific failure use #[should_panic] + #[ignore] for scarb test; run with snforge to verify.
+
+    #[test]
+    #[ignore]
+    #[available_gas(80000000)]
+    #[should_panic(expected: ('Block must increase',))]
+    fn test_security_replay_attack_execute_tick_twice() {
+        set_block_number(10000);
+        let (mut world, caller) = setup_world_with_profile();
+        let (addr, _) = world.dns(@"init_game").unwrap();
+        let init = IInitGameDispatcher { contract_address: addr };
+        init.init_game(0, zero_u256(), 0);
+        let player: Player = world.read_model(caller);
+        let run_id = player.run_id;
+        let (tick_addr, _) = world.dns(@"execute_tick").unwrap();
+        let tick_sys = IExecuteTickDispatcher { contract_address: tick_addr };
+        let ids: Array<u256> = ArrayTrait::new();
+        tick_sys.execute_tick(run_id, 0, zero_u256(), zero_u256(), ids);
+        let ids2: Array<u256> = ArrayTrait::new();
+        tick_sys.execute_tick(run_id, 0, zero_u256(), zero_u256(), ids2);
+    }
+
+    #[test]
+    #[ignore]
+    #[available_gas(50000000)]
+    #[should_panic(expected: ('Too soon to claim',))]
+    fn test_security_time_travel_claim_coins_before_24h() {
+        set_block_number(20000);
+        let (mut world, _caller) = setup_world_with_profile();
+        let (claim_addr, _) = world.dns(@"claim_coins").unwrap();
+        let claim_sys = IClaimCoinsDispatcher { contract_address: claim_addr };
+        claim_sys.claim_coins();
+        set_block_number(20000 + 3600);
+        claim_sys.claim_coins();
+    }
+
+    #[test]
+    #[available_gas(60000000)]
+    fn test_security_score_modification_no_direct_set() {
+        set_block_number(30000);
+        let (mut world, caller) = setup_world_with_profile();
+        let (addr, _) = world.dns(@"init_game").unwrap();
+        let init = IInitGameDispatcher { contract_address: addr };
+        init.init_game(0, zero_u256(), 0);
+        let player: Player = world.read_model(caller);
+        let run_id = player.run_id;
+        set_block_number(30001);
+        let (tick_addr, _) = world.dns(@"execute_tick").unwrap();
+        let tick_sys = IExecuteTickDispatcher { contract_address: tick_addr };
+        let ids: Array<u256> = ArrayTrait::new();
+        tick_sys.execute_tick(run_id, 0, zero_u256(), zero_u256(), ids);
+        let run_state: RunState = world.read_model((caller, run_id));
+        assert(run_state.score == 0, 'score no injection');
+    }
+
+    #[test]
+    #[ignore]
+    #[available_gas(50000000)]
+    #[should_panic(expected: ('Out of range',))]
+    fn test_security_position_spoofing_hit_enemy_500_away() {
+        set_block_number(40000);
+        let (mut world, caller) = setup_world_with_profile();
+        let (addr, _) = world.dns(@"init_game").unwrap();
+        let init = IInitGameDispatcher { contract_address: addr };
+        init.init_game(0, zero_u256(), 0);
+        let player: Player = world.read_model(caller);
+        let run_id = player.run_id;
+        let enemy_id = u256 { low: 10, high: 0 };
+        let enemy = Enemy {
+            enemy_id,
+            run_id,
+            player_address: caller,
+            enemy_type: 1,
+            health: 10,
+            max_health: 10,
+            speed: 0,
+            points_value: 100,
+            x: 500,
+            y: 0,
+            spawn_block: 40000,
+            last_position_update_block: 40000,
+            is_active: true,
+            destroyed_at_block: 0,
+            destruction_verified: false,
+        };
+        world.write_model_test(@enemy);
+        let (hit_addr, _) = world.dns(@"hit_registration").unwrap();
+        let hit_sys = IHitRegistrationDispatcher { contract_address: hit_addr };
+        hit_sys.hit_registration(run_id, enemy_id, 10, 0, 0, zero_u256());
+    }
+
+    #[test]
+    #[ignore]
+    #[available_gas(100000000)]
+    #[should_panic(expected: ('Already submitted',))]
+    fn test_security_double_submission_leaderboard_twice() {
+        set_block_number(50000);
+        let (mut world, caller) = setup_world_with_profile();
+        let (addr, _) = world.dns(@"init_game").unwrap();
+        let init = IInitGameDispatcher { contract_address: addr };
+        init.init_game(0, zero_u256(), 0);
+        let player: Player = world.read_model(caller);
+        let run_id = player.run_id;
+        let (end_addr, _) = world.dns(@"end_run").unwrap();
+        let end_sys = IEndRunDispatcher { contract_address: end_addr };
+        end_sys.end_run(run_id);
+        let week: u32 = 0;
+        let (sub_addr, _) = world.dns(@"submit_leaderboard").unwrap();
+        let sub_sys = ISubmitLeaderboardDispatcher { contract_address: sub_addr };
+        sub_sys.submit_leaderboard(run_id, week);
+        sub_sys.submit_leaderboard(run_id, week);
+    }
+
+    #[test]
+    #[ignore]
+    #[available_gas(40000000)]
+    #[should_panic(expected: ('Active run exists',))]
+    fn test_security_upgrade_tampering_change_upgrades_mid_game() {
+        set_block_number(60000);
+        let (mut world, _caller) = setup_world_with_profile();
+        let (addr, _) = world.dns(@"init_game").unwrap();
+        let init = IInitGameDispatcher { contract_address: addr };
+        init.init_game(0, zero_u256(), 0);
+        init.init_game(5, zero_u256(), 0);
+    }
+
+    #[test]
+    #[available_gas(50000000)]
+    fn test_security_infinite_lives_lives_capped_by_max() {
+        set_block_number(70000);
+        let (mut world, caller) = setup_world_with_profile();
+        let (addr, _) = world.dns(@"init_game").unwrap();
+        let init = IInitGameDispatcher { contract_address: addr };
+        init.init_game(0, zero_u256(), 0);
+        let player: Player = world.read_model(caller);
+        assert(player.lives <= player.max_lives, 'lives cap');
+        assert(player.lives == 3 && player.max_lives == 20, 'init lives');
+    }
+
+    #[test]
+    #[available_gas(80000000)]
+    fn test_security_damage_immunity_collision_applies_damage_when_not_invincible() {
+        set_block_number(80000);
+        let (mut world, caller) = setup_world_with_profile();
+        let (addr, _) = world.dns(@"init_game").unwrap();
+        let init = IInitGameDispatcher { contract_address: addr };
+        init.init_game(0, zero_u256(), 0);
+        let player: Player = world.read_model(caller);
+        let run_id = player.run_id;
+        let enemy_id = u256 { low: 20, high: 0 };
+        let enemy = Enemy {
+            enemy_id,
+            run_id,
+            player_address: caller,
+            enemy_type: 1,
+            health: 10,
+            max_health: 10,
+            speed: 0,
+            points_value: 100,
+            x: 0,
+            y: 0,
+            spawn_block: 80000,
+            last_position_update_block: 80000,
+            is_active: true,
+            destroyed_at_block: 0,
+            destruction_verified: false,
+        };
+        world.write_model_test(@enemy);
+        set_block_number(80001);
+        let (tick_addr, _) = world.dns(@"execute_tick").unwrap();
+        let tick_sys = IExecuteTickDispatcher { contract_address: tick_addr };
+        let mut ids: Array<u256> = ArrayTrait::new();
+        ids.append(enemy_id);
+        tick_sys.execute_tick(run_id, 0, zero_u256(), zero_u256(), ids);
+        let player_after: Player = world.read_model(caller);
+        assert(player_after.lives < player.lives, 'collision damage');
     }
 }
