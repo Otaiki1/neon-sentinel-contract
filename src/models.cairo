@@ -211,6 +211,7 @@ pub struct PlayerProfile {
     pub coins: u32,
     pub last_coin_claim_block: u64,
     pub coin_transaction_log_hash: u256,
+    pub coin_transaction_count: u32,
     pub selected_kernel: u8,
     pub kernel_unlocks: u64,
     pub avatar_unlocks: u64,
