@@ -1,5 +1,6 @@
 pub mod systems {
     pub mod actions;
+    pub mod init_game;
 }
 
 pub mod models;
