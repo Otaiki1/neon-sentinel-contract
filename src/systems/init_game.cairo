@@ -36,18 +36,40 @@ pub trait IInitGame<T> {
 
 const TWO_POW_64: u128 = 18446744073709551616; // 2^64
 
+/// Reason felt252 for upgrade spend (coin history and event).
+const REASON_PREGAME_UPGRADES: felt252 = 'pregame_upgrades';
+
 #[dojo::contract]
 pub mod init_game {
     use core::integer::u256;
+    use dojo::event::EventStorage;
     use dojo::model::ModelStorage;
     use starknet::{ContractAddress, get_caller_address, get_execution_info};
 
     use super::{
         COMBO_ONE, COIN_PER_UPGRADE, EVENT_TYPE_GAME_START, MAX_KERNEL, MAX_LIVES,
-        MAX_PREGAME_UPGRADES_MASK, START_LIVES, START_X, START_Y, TWO_POW_64,
+        MAX_PREGAME_UPGRADES_MASK, REASON_PREGAME_UPGRADES, START_LIVES, START_X, START_Y,
+        TWO_POW_64,
     };
     use super::IInitGame;
     use neon_sentinel::models::{GameEvent, Player, PlayerProfile, RunState};
+
+    /// Append transaction to log hash chain (same as spend_coins / claim_coins).
+    fn next_coin_log_hash(prev: u256, block_number: u64, amount: u32) -> u256 {
+        let bl: u128 = block_number.try_into().unwrap();
+        let am: u128 = amount.try_into().unwrap();
+        u256 { low: prev.low + bl + am, high: prev.high + 1 }
+    }
+
+    #[derive(Copy, Drop, Serde)]
+    #[dojo::event]
+    pub struct CoinSpent {
+        #[key]
+        pub player: ContractAddress,
+        pub amount: u32,
+        pub reason: felt252,
+        pub block_number: u64,
+    }
 
     /// Deterministic seed from block + caller for replay verification.
     fn compute_run_seed(block_number: u64, block_timestamp: u64, _caller: ContractAddress) -> u256 {
@@ -183,9 +205,20 @@ pub mod init_game {
             };
             world.write_model(@game_event);
 
-            // 10. Deduct coins from player profile
+            // 10. Deduct coins and record in coin history (same as spend_coins)
             profile.coins -= expected_cost;
+            profile.coin_transaction_log_hash =
+                next_coin_log_hash(profile.coin_transaction_log_hash, block_number, expected_cost);
+            profile.coin_transaction_count += 1;
             world.write_model(@profile);
+
+            // 11. Emit CoinSpent-style event for logging
+            world.emit_event(@CoinSpent {
+                player: caller,
+                amount: expected_cost,
+                reason: REASON_PREGAME_UPGRADES,
+                block_number,
+            });
         }
     }
 
