@@ -26,7 +26,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "dojo_starter"
+name = "neon_sentinel"
 version = "1.8.0"
 dependencies = [
  "dojo",
