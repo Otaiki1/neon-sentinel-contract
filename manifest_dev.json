@@ -1,7 +1,7 @@
 {
   "world": {
     "class_hash": "0x613551abceb2b37073b1149bb862ea70cf029981ce1ca47e9dd7c7ab97cb65d",
-    "address": "0x26d5777eccca1861a23303ee0ba48c0e8349e849d0377a21c3801ef1d0f8cef",
+    "address": "0x2f95920e5084eb35b6831f05cec568756752aafedfdd85fe99454398a874818",
     "seed": "neon_sentinel",
     "name": "Neon Sentinel",
     "entrypoints": [
@@ -33,14 +33,91 @@
   },
   "contracts": [
     {
-      "address": "0x1ae76ae877518f905b73b643d96731e71e6b848ba68824adb4f1a77760fc3c7",
-      "class_hash": "0x1e4e6be422f3800cb260624f990b0e0a8250217cbd3c79db6c90a8d0c8527a0",
+      "address": "0x346bb3de056b133de4087760a31a140f5f4b552bbd0a37fb2ee92a26263b476",
+      "class_hash": "0x2c0e0b4a5b2867f71db222b0681562df260891bba4b8fb44e3231422f011c82",
       "init_calldata": [],
       "tag": "neon_sentinel-actions",
-      "selector": "0x7a1c71029f2d0b38e3ac89b09931d08b6e48417e079c289ff19a8698d0cba33",
+      "selector": "0x385459abffdaa78f5f7da28c8ac18d51ef7a4f88ece40f6665a624432825a41",
       "systems": [
         "spawn",
         "move",
+        "upgrade"
+      ]
+    },
+    {
+      "address": "0x344dbe97d6d181c43b63fd1280f574e5851205243ab6769391b7485a7093efc",
+      "class_hash": "0x3204d4ccf0b4c4cb8d86ee1ac55e5e7414d81729f65d6f61244e91ca4baa9cb",
+      "init_calldata": [],
+      "tag": "neon_sentinel-claim_coins",
+      "selector": "0x607365412e560d61876a913bfd807f1d13735699ddec61fb2a7469c839cc9f3",
+      "systems": [
+        "claim_coins",
+        "upgrade"
+      ]
+    },
+    {
+      "address": "0x5bb58a944fa4cd028a0ba406cc75bce2b0c14c3103e97a265431cd35185515e",
+      "class_hash": "0x2f0b1e13a7ee6689fbd24d0336333cd52ec4ec895528d191af64de2fc9f6e11",
+      "init_calldata": [],
+      "tag": "neon_sentinel-end_run",
+      "selector": "0x3fe142a485720de89e3ec7f413332dab897652d4e5b639509bdd5b35514a6eb",
+      "systems": [
+        "end_run",
+        "upgrade"
+      ]
+    },
+    {
+      "address": "0x3c45c091b6ca2d41b7559e721e199a2c90e7f381d20e4e550cc71df17dbf43c",
+      "class_hash": "0x695ebbe4a233ae57456f1ac49d81f34da9f65849a9a606bd7a29a1a00f02cfd",
+      "init_calldata": [],
+      "tag": "neon_sentinel-execute_tick",
+      "selector": "0x235ebcb3b862d12477413d6313d531658b90dd1d8579c9285213d9b9a414fda",
+      "systems": [
+        "execute_tick",
+        "upgrade"
+      ]
+    },
+    {
+      "address": "0x1adb45326c57c92bb0f8fd2497f4701be4f67966aa67d4e7df0216d13e9af83",
+      "class_hash": "0x7b162ce369108447efbbf2a2010b8467ec4fc2ab3e65ea06ec728b4320b26bc",
+      "init_calldata": [],
+      "tag": "neon_sentinel-hit_registration",
+      "selector": "0x4119931f350a1f7fcc5058505274adf7e00e67eb2ee745034c404e6f751ff7b",
+      "systems": [
+        "hit_registration",
+        "upgrade"
+      ]
+    },
+    {
+      "address": "0x3f1d6de784023c45c9068f3c463dd17a0dfafcff09bf59954744735d4044b10",
+      "class_hash": "0x4411fc125de0b3b2939d2f69b5696da360564c88fe3a527baed5320c537b19",
+      "init_calldata": [],
+      "tag": "neon_sentinel-init_game",
+      "selector": "0x3dd8e0d2edb68c1b6fa11ef2ea5bcd27a13dc7cfef097ac68ca57ce74871c54",
+      "systems": [
+        "init_game",
+        "upgrade"
+      ]
+    },
+    {
+      "address": "0x5dee6ef27bef601518e4921d7af06e0aa6828b095af4d1a74e56859371538ed",
+      "class_hash": "0x11e54cd54e52855b6a21fac3e68dadb440985f5dbcd57b56e34e62bf89e1fe8",
+      "init_calldata": [],
+      "tag": "neon_sentinel-spend_coins",
+      "selector": "0x32459b01f05578bddca8031c0051d71163b8060767a3d82106b4442475d42e",
+      "systems": [
+        "spend_coins",
+        "upgrade"
+      ]
+    },
+    {
+      "address": "0x2025b6dba1694ef96e9c27ac80bb52fd998ebb8ad4abbcb21ea222dc9b51c4",
+      "class_hash": "0x67756087b73368a30aafb9967f36a6ee29143dfadfac6a7f4037de97304dc1a",
+      "init_calldata": [],
+      "tag": "neon_sentinel-submit_leaderboard",
+      "selector": "0x3192fb449fc2beeeec0219ae887d53738bef5e1643948a7d058efe5939a07",
+      "systems": [
+        "submit_leaderboard",
         "upgrade"
       ]
     }
@@ -60,9 +137,362 @@
           "key": false
         }
       ],
-      "class_hash": "0x2559fd839331a03a9b36aa013a7a8b07d0c5f1ad5e011ff32e1f0d2d2c8bac0",
+      "class_hash": "0x502cd93bd72d85560b2f4faea3c74696af0f0f81a3d6e71d5b3ef4a290e218d",
       "tag": "neon_sentinel-DirectionsAvailable",
-      "selector": "0x77844f1facb51e60e546a9832d56c6bd04fa23be4fd5b57290caae5e9a3c1e4"
+      "selector": "0x2bb2d75059daef56606306df65513515c138140413429fe62ed52cbe94071ca"
+    },
+    {
+      "members": [
+        {
+          "name": "enemy_id",
+          "type": "core::integer::u256",
+          "key": true
+        },
+        {
+          "name": "run_id",
+          "type": "core::integer::u256",
+          "key": false
+        },
+        {
+          "name": "player_address",
+          "type": "core::starknet::contract_address::ContractAddress",
+          "key": false
+        },
+        {
+          "name": "enemy_type",
+          "type": "core::integer::u8",
+          "key": false
+        },
+        {
+          "name": "health",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "max_health",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "speed",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "points_value",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "x",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "y",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "spawn_block",
+          "type": "core::integer::u64",
+          "key": false
+        },
+        {
+          "name": "last_position_update_block",
+          "type": "core::integer::u64",
+          "key": false
+        },
+        {
+          "name": "is_active",
+          "type": "core::bool",
+          "key": false
+        },
+        {
+          "name": "destroyed_at_block",
+          "type": "core::integer::u64",
+          "key": false
+        },
+        {
+          "name": "destruction_verified",
+          "type": "core::bool",
+          "key": false
+        }
+      ],
+      "class_hash": "0x5ea12378b20343118eabee82c526fea2aba11bd5b0a6b0a3575f97618037739",
+      "tag": "neon_sentinel-Enemy",
+      "selector": "0x106caec0f252e26caf08e01740b391792f74c80e9c1dc92b01b3b0c0f960522"
+    },
+    {
+      "members": [
+        {
+          "name": "event_id",
+          "type": "core::integer::u256",
+          "key": true
+        },
+        {
+          "name": "run_id",
+          "type": "core::integer::u256",
+          "key": false
+        },
+        {
+          "name": "player_address",
+          "type": "core::starknet::contract_address::ContractAddress",
+          "key": false
+        },
+        {
+          "name": "event_type",
+          "type": "core::integer::u8",
+          "key": false
+        },
+        {
+          "name": "tick_number",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "block_number",
+          "type": "core::integer::u64",
+          "key": false
+        },
+        {
+          "name": "entity_id",
+          "type": "core::integer::u256",
+          "key": false
+        },
+        {
+          "name": "data_primary",
+          "type": "core::integer::u256",
+          "key": false
+        },
+        {
+          "name": "data_secondary",
+          "type": "core::integer::u256",
+          "key": false
+        },
+        {
+          "name": "game_state_hash_before",
+          "type": "core::integer::u256",
+          "key": false
+        },
+        {
+          "name": "game_state_hash_after",
+          "type": "core::integer::u256",
+          "key": false
+        },
+        {
+          "name": "verified",
+          "type": "core::bool",
+          "key": false
+        }
+      ],
+      "class_hash": "0x4f37c2e9ad459891a00a8d27e530bea7d9e2f67b51d9d84fc59e78654d92bc",
+      "tag": "neon_sentinel-GameEvent",
+      "selector": "0x44bde2f391e57c42624d40309f7dbff78fa51b098f2572fa31ba830c5519da1"
+    },
+    {
+      "members": [
+        {
+          "name": "player_address",
+          "type": "core::starknet::contract_address::ContractAddress",
+          "key": true
+        },
+        {
+          "name": "run_id",
+          "type": "core::integer::u256",
+          "key": true
+        },
+        {
+          "name": "tick_number",
+          "type": "core::integer::u32",
+          "key": true
+        },
+        {
+          "name": "block_number",
+          "type": "core::integer::u64",
+          "key": false
+        },
+        {
+          "name": "timestamp",
+          "type": "core::integer::u64",
+          "key": false
+        },
+        {
+          "name": "player_input",
+          "type": "core::integer::u8",
+          "key": false
+        },
+        {
+          "name": "input_sig",
+          "type": "core::integer::u256",
+          "key": false
+        },
+        {
+          "name": "player_x",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "player_y",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "score_delta",
+          "type": "core::integer::u64",
+          "key": false
+        },
+        {
+          "name": "enemies_killed",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "damage_taken",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "combo_before",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "combo_after",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "state_hash_before",
+          "type": "core::integer::u256",
+          "key": false
+        },
+        {
+          "name": "state_hash_after",
+          "type": "core::integer::u256",
+          "key": false
+        },
+        {
+          "name": "tick_hash",
+          "type": "core::integer::u256",
+          "key": false
+        }
+      ],
+      "class_hash": "0x224d923204e0504521c90cf6da94fac38568c28a128524914168060e7c25165",
+      "tag": "neon_sentinel-GameTick",
+      "selector": "0x243c1cdf77222b0b90300c8264e857f5da3313247f29c8e3e8f0dca863ddc71"
+    },
+    {
+      "members": [
+        {
+          "name": "entry_id",
+          "type": "core::integer::u256",
+          "key": true
+        },
+        {
+          "name": "player_address",
+          "type": "core::starknet::contract_address::ContractAddress",
+          "key": false
+        },
+        {
+          "name": "player_name",
+          "type": "core::felt252",
+          "key": false
+        },
+        {
+          "name": "week",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "final_score",
+          "type": "core::integer::u64",
+          "key": false
+        },
+        {
+          "name": "deepest_layer",
+          "type": "core::integer::u8",
+          "key": false
+        },
+        {
+          "name": "prestige_level",
+          "type": "core::integer::u8",
+          "key": false
+        },
+        {
+          "name": "survival_blocks",
+          "type": "core::integer::u64",
+          "key": false
+        },
+        {
+          "name": "max_corruption",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "enemies_defeated",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "peak_combo",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "accuracy",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "run_id",
+          "type": "core::integer::u256",
+          "key": false
+        },
+        {
+          "name": "submission_block",
+          "type": "core::integer::u64",
+          "key": false
+        },
+        {
+          "name": "submission_hash",
+          "type": "core::integer::u256",
+          "key": false
+        },
+        {
+          "name": "event_log_hash",
+          "type": "core::integer::u256",
+          "key": false
+        },
+        {
+          "name": "game_seed",
+          "type": "core::integer::u256",
+          "key": false
+        },
+        {
+          "name": "replay_verifiable",
+          "type": "core::bool",
+          "key": false
+        },
+        {
+          "name": "tick_count",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "aberrations_detected",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "verified",
+          "type": "core::bool",
+          "key": false
+        }
+      ],
+      "class_hash": "0x2bd2837e1b1e3c069b8ccdc795e848b4cdf92b692f4e7a2e55ae94dfbdf918e",
+      "tag": "neon_sentinel-LeaderboardEntry",
+      "selector": "0x6955741c4e2a92b674f5fb9da06764947678662d644f3f89b1730a21e3e8d97"
     },
     {
       "members": [
@@ -87,9 +517,218 @@
           "key": false
         }
       ],
-      "class_hash": "0x6a76fa6031748b3832fd5916ce4b4e7124c39f523c8e7b5d83da40cc93fc63d",
+      "class_hash": "0x218e89c43443ac35a7151fd5e2ab9b99c89d7a70aa5c20f94415b5551e8112e",
       "tag": "neon_sentinel-Moves",
-      "selector": "0x2a29373f1af8348bd366a990eb3a342ef2cbe5e85160539eaca3441a673f468"
+      "selector": "0x5d5e056bfa9968658e0d9d67400948ad53859405d08d0cfaae9b68f0cff0228"
+    },
+    {
+      "members": [
+        {
+          "name": "player_address",
+          "type": "core::starknet::contract_address::ContractAddress",
+          "key": true
+        },
+        {
+          "name": "run_id",
+          "type": "core::integer::u256",
+          "key": false
+        },
+        {
+          "name": "is_active",
+          "type": "core::bool",
+          "key": false
+        },
+        {
+          "name": "x",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "y",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "lives",
+          "type": "core::integer::u8",
+          "key": false
+        },
+        {
+          "name": "max_lives",
+          "type": "core::integer::u8",
+          "key": false
+        },
+        {
+          "name": "kernel",
+          "type": "core::integer::u8",
+          "key": false
+        },
+        {
+          "name": "invincible_until_block",
+          "type": "core::integer::u64",
+          "key": false
+        },
+        {
+          "name": "overclock_meter",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "shock_bomb_meter",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "god_mode_meter",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "overclock_active",
+          "type": "core::bool",
+          "key": false
+        },
+        {
+          "name": "god_mode_active",
+          "type": "core::bool",
+          "key": false
+        },
+        {
+          "name": "upgrades_verified",
+          "type": "core::bool",
+          "key": false
+        },
+        {
+          "name": "tick_counter",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "last_tick_block",
+          "type": "core::integer::u64",
+          "key": false
+        }
+      ],
+      "class_hash": "0x1ec0ccc8af08e35c0e8e27adb8cd2f4b4aa16623623a643fd52f641ad1f765d",
+      "tag": "neon_sentinel-Player",
+      "selector": "0x6467ab10b38e54a9a5c615740f851fdf16b79cf511ca6d5e704938f4a6c3424"
+    },
+    {
+      "members": [
+        {
+          "name": "player_address",
+          "type": "core::starknet::contract_address::ContractAddress",
+          "key": true
+        },
+        {
+          "name": "current_prestige",
+          "type": "core::integer::u8",
+          "key": false
+        },
+        {
+          "name": "current_layer",
+          "type": "core::integer::u8",
+          "key": false
+        },
+        {
+          "name": "highest_prestige_reached",
+          "type": "core::integer::u8",
+          "key": false
+        },
+        {
+          "name": "is_prime_sentinel",
+          "type": "core::bool",
+          "key": false
+        },
+        {
+          "name": "total_runs",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "lifetime_score",
+          "type": "core::integer::u64",
+          "key": false
+        },
+        {
+          "name": "lifetime_playtime_blocks",
+          "type": "core::integer::u64",
+          "key": false
+        },
+        {
+          "name": "lifetime_enemies_defeated",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "best_combo_multiplier",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "best_run_score",
+          "type": "core::integer::u64",
+          "key": false
+        },
+        {
+          "name": "best_corruption_reached",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "coins",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "last_coin_claim_block",
+          "type": "core::integer::u64",
+          "key": false
+        },
+        {
+          "name": "coin_transaction_log_hash",
+          "type": "core::integer::u256",
+          "key": false
+        },
+        {
+          "name": "coin_transaction_count",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "selected_kernel",
+          "type": "core::integer::u8",
+          "key": false
+        },
+        {
+          "name": "kernel_unlocks",
+          "type": "core::integer::u64",
+          "key": false
+        },
+        {
+          "name": "avatar_unlocks",
+          "type": "core::integer::u64",
+          "key": false
+        },
+        {
+          "name": "cosmetic_unlocks",
+          "type": "core::integer::u64",
+          "key": false
+        },
+        {
+          "name": "last_profile_update_block",
+          "type": "core::integer::u64",
+          "key": false
+        },
+        {
+          "name": "profile_hash",
+          "type": "core::integer::u256",
+          "key": false
+        }
+      ],
+      "class_hash": "0x3b3cdd09ef1a117819e524a5a24dcb954d936f2c1d15a607b223e3d130fc857",
+      "tag": "neon_sentinel-PlayerProfile",
+      "selector": "0x718f29799a183a770ae0710cf3276ab9591c24cb105cc9cdc7425648590e048"
     },
     {
       "members": [
@@ -104,9 +743,9 @@
           "key": false
         }
       ],
-      "class_hash": "0x1f7793c7abcd26a4fb648f883a947c8e6d74077b7161a008e1f1966b3b1f317",
+      "class_hash": "0x4b7e30cfa07cd4afdec6c9e3e3c19672882c0615dc82deba1d2edec013a9bd4",
       "tag": "neon_sentinel-Position",
-      "selector": "0x2ac8b4c190f7031b9fc44312e6b047a1dce0b3f2957c33a935ca7846a46dd5b"
+      "selector": "0x69e65f47552624342a01f288d404a1e8807ffbf755ffb480b7e0d7856cd7433"
     },
     {
       "members": [
@@ -121,12 +760,163 @@
           "key": false
         }
       ],
-      "class_hash": "0x71686e5c13179d564fbb3fe4cf68ad197e2722a0869502cb3017e2cf70ffc3",
+      "class_hash": "0x4f521937209899cee9d074ed7b113ee9ffa62acd60f91bf31aab787b88a115e",
       "tag": "neon_sentinel-PositionCount",
-      "selector": "0x44e8e8c3aea54e97e01563cacc08abb4a8ce8c468cd4d3a332bca12bfc2290d"
+      "selector": "0x6b077af2d3807e3e3fe243f2cf829130a1e3aeba70aac915d7026fc4d77ef6d"
+    },
+    {
+      "members": [
+        {
+          "name": "player_address",
+          "type": "core::starknet::contract_address::ContractAddress",
+          "key": true
+        },
+        {
+          "name": "run_id",
+          "type": "core::integer::u256",
+          "key": true
+        },
+        {
+          "name": "current_layer",
+          "type": "core::integer::u8",
+          "key": false
+        },
+        {
+          "name": "current_prestige",
+          "type": "core::integer::u8",
+          "key": false
+        },
+        {
+          "name": "score",
+          "type": "core::integer::u64",
+          "key": false
+        },
+        {
+          "name": "combo_multiplier",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "corruption_level",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "corruption_multiplier",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "started_at_block",
+          "type": "core::integer::u64",
+          "key": false
+        },
+        {
+          "name": "last_tick_block",
+          "type": "core::integer::u64",
+          "key": false
+        },
+        {
+          "name": "total_ticks_processed",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "enemies_defeated",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "shots_fired",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "shots_hit",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "accuracy",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "is_finished",
+          "type": "core::bool",
+          "key": false
+        },
+        {
+          "name": "final_score",
+          "type": "core::integer::u64",
+          "key": false
+        },
+        {
+          "name": "final_layer",
+          "type": "core::integer::u8",
+          "key": false
+        },
+        {
+          "name": "submitted_to_leaderboard",
+          "type": "core::bool",
+          "key": false
+        }
+      ],
+      "class_hash": "0x737278fb5938be97ccf28a9ddfd27d2c3701a5f2535fa0271c79de464aae793",
+      "tag": "neon_sentinel-RunState",
+      "selector": "0x7ef404f5a5743347d3e1a1dba6192b8fd882177a90915fb4c52275bb7e87f47"
     }
   ],
   "events": [
+    {
+      "members": [
+        {
+          "name": "player",
+          "type": "core::starknet::contract_address::ContractAddress",
+          "key": true
+        },
+        {
+          "name": "amount",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "block_number",
+          "type": "core::integer::u64",
+          "key": false
+        }
+      ],
+      "class_hash": "0x772512e53d45d70ac63101328bb151ef84f4e2fc003a3a54a1896c3c4b50a80",
+      "tag": "neon_sentinel-CoinClaimed",
+      "selector": "0x5fa3afa5312f8af300c36f3da8dd021a64baddb12a9278ff9a2223724d91ad8"
+    },
+    {
+      "members": [
+        {
+          "name": "player",
+          "type": "core::starknet::contract_address::ContractAddress",
+          "key": true
+        },
+        {
+          "name": "amount",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "reason",
+          "type": "core::felt252",
+          "key": false
+        },
+        {
+          "name": "block_number",
+          "type": "core::integer::u64",
+          "key": false
+        }
+      ],
+      "class_hash": "0x3df73750a849404849195b8da0e81118a65b82120fda4afa41b886aa3483bd3",
+      "tag": "neon_sentinel-CoinSpent",
+      "selector": "0x3975b3d0f663d83561d1608ca27577f53b4716a1d230eb59f87df987921804c"
+    },
     {
       "members": [
         {
@@ -140,9 +930,9 @@
           "key": false
         }
       ],
-      "class_hash": "0x1dc24a2235f0735e79b159a1ec312001651aee14281446b703b76b17b5dcf0c",
+      "class_hash": "0x17ab7be46759edf5e47f534a4aea16cbc1b48fdb67c00ad4d6d26db6c57525",
       "tag": "neon_sentinel-Moved",
-      "selector": "0x504403e5c02b6442527721fc464d9ea5fc8f1ee600ab5ccd5c0845d36fd45f1"
+      "selector": "0x2c3389fcfe061b4824da835de5d26748cb62e87def661d4bab841ad534dbb21"
     }
   ],
   "external_contracts": [],
@@ -281,6 +1071,20 @@
         {
           "name": "pending_word_len",
           "type": "core::internal::bounded_int::BoundedInt::<0, 30>"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "core::integer::u256",
+      "members": [
+        {
+          "name": "low",
+          "type": "core::integer::u128"
+        },
+        {
+          "name": "high",
+          "type": "core::integer::u128"
         }
       ]
     },
@@ -1987,6 +2791,37 @@
       "state_mutability": "view"
     },
     {
+      "type": "function",
+      "name": "ensure_abi",
+      "inputs": [
+        {
+          "name": "event",
+          "type": "neon_sentinel::systems::actions::actions::Moved"
+        }
+      ],
+      "outputs": [],
+      "state_mutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "ensure_unique",
+      "inputs": [],
+      "outputs": [],
+      "state_mutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "ensure_values",
+      "inputs": [
+        {
+          "name": "value",
+          "type": "neon_sentinel::systems::actions::actions::MovedValue"
+        }
+      ],
+      "outputs": [],
+      "state_mutability": "view"
+    },
+    {
       "type": "enum",
       "name": "neon_sentinel::models::Direction",
       "variants": [
@@ -2034,6 +2869,550 @@
     },
     {
       "type": "struct",
+      "name": "neon_sentinel::models::Enemy",
+      "members": [
+        {
+          "name": "enemy_id",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "run_id",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "player_address",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "name": "enemy_type",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "health",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "max_health",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "speed",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "points_value",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "x",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "y",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "spawn_block",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "last_position_update_block",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "is_active",
+          "type": "core::bool"
+        },
+        {
+          "name": "destroyed_at_block",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "destruction_verified",
+          "type": "core::bool"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "neon_sentinel::models::EnemyValue",
+      "members": [
+        {
+          "name": "run_id",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "player_address",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "name": "enemy_type",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "health",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "max_health",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "speed",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "points_value",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "x",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "y",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "spawn_block",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "last_position_update_block",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "is_active",
+          "type": "core::bool"
+        },
+        {
+          "name": "destroyed_at_block",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "destruction_verified",
+          "type": "core::bool"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "neon_sentinel::models::GameEvent",
+      "members": [
+        {
+          "name": "event_id",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "run_id",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "player_address",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "name": "event_type",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "tick_number",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "block_number",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "entity_id",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "data_primary",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "data_secondary",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "game_state_hash_before",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "game_state_hash_after",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "verified",
+          "type": "core::bool"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "neon_sentinel::models::GameEventValue",
+      "members": [
+        {
+          "name": "run_id",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "player_address",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "name": "event_type",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "tick_number",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "block_number",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "entity_id",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "data_primary",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "data_secondary",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "game_state_hash_before",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "game_state_hash_after",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "verified",
+          "type": "core::bool"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "neon_sentinel::models::GameTick",
+      "members": [
+        {
+          "name": "player_address",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "name": "run_id",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "tick_number",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "block_number",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "timestamp",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "player_input",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "input_sig",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "player_x",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "player_y",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "score_delta",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "enemies_killed",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "damage_taken",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "combo_before",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "combo_after",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "state_hash_before",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "state_hash_after",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "tick_hash",
+          "type": "core::integer::u256"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "neon_sentinel::models::GameTickValue",
+      "members": [
+        {
+          "name": "block_number",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "timestamp",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "player_input",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "input_sig",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "player_x",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "player_y",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "score_delta",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "enemies_killed",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "damage_taken",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "combo_before",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "combo_after",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "state_hash_before",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "state_hash_after",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "tick_hash",
+          "type": "core::integer::u256"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "neon_sentinel::models::LeaderboardEntry",
+      "members": [
+        {
+          "name": "entry_id",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "player_address",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "name": "player_name",
+          "type": "core::felt252"
+        },
+        {
+          "name": "week",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "final_score",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "deepest_layer",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "prestige_level",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "survival_blocks",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "max_corruption",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "enemies_defeated",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "peak_combo",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "accuracy",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "run_id",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "submission_block",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "submission_hash",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "event_log_hash",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "game_seed",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "replay_verifiable",
+          "type": "core::bool"
+        },
+        {
+          "name": "tick_count",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "aberrations_detected",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "verified",
+          "type": "core::bool"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "neon_sentinel::models::LeaderboardEntryValue",
+      "members": [
+        {
+          "name": "player_address",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "name": "player_name",
+          "type": "core::felt252"
+        },
+        {
+          "name": "week",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "final_score",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "deepest_layer",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "prestige_level",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "survival_blocks",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "max_corruption",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "enemies_defeated",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "peak_combo",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "accuracy",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "run_id",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "submission_block",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "submission_hash",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "event_log_hash",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "game_seed",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "replay_verifiable",
+          "type": "core::bool"
+        },
+        {
+          "name": "tick_count",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "aberrations_detected",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "verified",
+          "type": "core::bool"
+        }
+      ]
+    },
+    {
+      "type": "struct",
       "name": "neon_sentinel::models::Moves",
       "members": [
         {
@@ -2069,6 +3448,334 @@
         {
           "name": "can_move",
           "type": "core::bool"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "neon_sentinel::models::Player",
+      "members": [
+        {
+          "name": "player_address",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "name": "run_id",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "is_active",
+          "type": "core::bool"
+        },
+        {
+          "name": "x",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "y",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "lives",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "max_lives",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "kernel",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "invincible_until_block",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "overclock_meter",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "shock_bomb_meter",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "god_mode_meter",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "overclock_active",
+          "type": "core::bool"
+        },
+        {
+          "name": "god_mode_active",
+          "type": "core::bool"
+        },
+        {
+          "name": "upgrades_verified",
+          "type": "core::bool"
+        },
+        {
+          "name": "tick_counter",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "last_tick_block",
+          "type": "core::integer::u64"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "neon_sentinel::models::PlayerProfile",
+      "members": [
+        {
+          "name": "player_address",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "name": "current_prestige",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "current_layer",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "highest_prestige_reached",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "is_prime_sentinel",
+          "type": "core::bool"
+        },
+        {
+          "name": "total_runs",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "lifetime_score",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "lifetime_playtime_blocks",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "lifetime_enemies_defeated",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "best_combo_multiplier",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "best_run_score",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "best_corruption_reached",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "coins",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "last_coin_claim_block",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "coin_transaction_log_hash",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "coin_transaction_count",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "selected_kernel",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "kernel_unlocks",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "avatar_unlocks",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "cosmetic_unlocks",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "last_profile_update_block",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "profile_hash",
+          "type": "core::integer::u256"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "neon_sentinel::models::PlayerProfileValue",
+      "members": [
+        {
+          "name": "current_prestige",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "current_layer",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "highest_prestige_reached",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "is_prime_sentinel",
+          "type": "core::bool"
+        },
+        {
+          "name": "total_runs",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "lifetime_score",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "lifetime_playtime_blocks",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "lifetime_enemies_defeated",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "best_combo_multiplier",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "best_run_score",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "best_corruption_reached",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "coins",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "last_coin_claim_block",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "coin_transaction_log_hash",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "coin_transaction_count",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "selected_kernel",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "kernel_unlocks",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "avatar_unlocks",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "cosmetic_unlocks",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "last_profile_update_block",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "profile_hash",
+          "type": "core::integer::u256"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "neon_sentinel::models::PlayerValue",
+      "members": [
+        {
+          "name": "run_id",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "is_active",
+          "type": "core::bool"
+        },
+        {
+          "name": "x",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "y",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "lives",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "max_lives",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "kernel",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "invincible_until_block",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "overclock_meter",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "shock_bomb_meter",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "god_mode_meter",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "overclock_active",
+          "type": "core::bool"
+        },
+        {
+          "name": "god_mode_active",
+          "type": "core::bool"
+        },
+        {
+          "name": "upgrades_verified",
+          "type": "core::bool"
+        },
+        {
+          "name": "tick_counter",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "last_tick_block",
+          "type": "core::integer::u64"
         }
       ]
     },
@@ -2122,6 +3829,162 @@
     },
     {
       "type": "struct",
+      "name": "neon_sentinel::models::RunState",
+      "members": [
+        {
+          "name": "player_address",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "name": "run_id",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "current_layer",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "current_prestige",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "score",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "combo_multiplier",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "corruption_level",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "corruption_multiplier",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "started_at_block",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "last_tick_block",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "total_ticks_processed",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "enemies_defeated",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "shots_fired",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "shots_hit",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "accuracy",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "is_finished",
+          "type": "core::bool"
+        },
+        {
+          "name": "final_score",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "final_layer",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "submitted_to_leaderboard",
+          "type": "core::bool"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "neon_sentinel::models::RunStateValue",
+      "members": [
+        {
+          "name": "current_layer",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "current_prestige",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "score",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "combo_multiplier",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "corruption_level",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "corruption_multiplier",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "started_at_block",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "last_tick_block",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "total_ticks_processed",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "enemies_defeated",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "shots_fired",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "shots_hit",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "accuracy",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "is_finished",
+          "type": "core::bool"
+        },
+        {
+          "name": "final_score",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "final_layer",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "submitted_to_leaderboard",
+          "type": "core::bool"
+        }
+      ]
+    },
+    {
+      "type": "struct",
       "name": "neon_sentinel::models::Vec2",
       "members": [
         {
@@ -2142,7 +4005,43 @@
     },
     {
       "type": "event",
+      "name": "neon_sentinel::models::m_Enemy::Event",
+      "kind": "enum",
+      "variants": []
+    },
+    {
+      "type": "event",
+      "name": "neon_sentinel::models::m_GameEvent::Event",
+      "kind": "enum",
+      "variants": []
+    },
+    {
+      "type": "event",
+      "name": "neon_sentinel::models::m_GameTick::Event",
+      "kind": "enum",
+      "variants": []
+    },
+    {
+      "type": "event",
+      "name": "neon_sentinel::models::m_LeaderboardEntry::Event",
+      "kind": "enum",
+      "variants": []
+    },
+    {
+      "type": "event",
       "name": "neon_sentinel::models::m_Moves::Event",
+      "kind": "enum",
+      "variants": []
+    },
+    {
+      "type": "event",
+      "name": "neon_sentinel::models::m_Player::Event",
+      "kind": "enum",
+      "variants": []
+    },
+    {
+      "type": "event",
+      "name": "neon_sentinel::models::m_PlayerProfile::Event",
       "kind": "enum",
       "variants": []
     },
@@ -2155,6 +4054,12 @@
     {
       "type": "event",
       "name": "neon_sentinel::models::m_PositionCount::Event",
+      "kind": "enum",
+      "variants": []
+    },
+    {
+      "type": "event",
+      "name": "neon_sentinel::models::m_RunState::Event",
       "kind": "enum",
       "variants": []
     },
@@ -2231,35 +4136,384 @@
       "variants": []
     },
     {
-      "type": "function",
-      "name": "ensure_abi",
-      "inputs": [
+      "type": "interface",
+      "name": "neon_sentinel::systems::claim_coins::IClaimCoins",
+      "items": [
         {
-          "name": "event",
-          "type": "neon_sentinel::systems::actions::actions::Moved"
+          "type": "function",
+          "name": "claim_coins",
+          "inputs": [],
+          "outputs": [],
+          "state_mutability": "external"
         }
-      ],
-      "outputs": [],
-      "state_mutability": "view"
+      ]
     },
     {
-      "type": "function",
-      "name": "ensure_unique",
-      "inputs": [],
-      "outputs": [],
-      "state_mutability": "view"
+      "type": "struct",
+      "name": "neon_sentinel::systems::claim_coins::claim_coins::CoinClaimed",
+      "members": [
+        {
+          "name": "player",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "name": "amount",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "block_number",
+          "type": "core::integer::u64"
+        }
+      ]
     },
     {
-      "type": "function",
-      "name": "ensure_values",
-      "inputs": [
+      "type": "struct",
+      "name": "neon_sentinel::systems::claim_coins::claim_coins::CoinClaimedValue",
+      "members": [
         {
-          "name": "value",
-          "type": "neon_sentinel::systems::actions::actions::MovedValue"
+          "name": "amount",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "block_number",
+          "type": "core::integer::u64"
         }
-      ],
-      "outputs": [],
-      "state_mutability": "view"
+      ]
+    },
+    {
+      "type": "event",
+      "name": "neon_sentinel::systems::claim_coins::claim_coins::Event",
+      "kind": "enum",
+      "variants": [
+        {
+          "name": "UpgradeableEvent",
+          "type": "dojo::contract::components::upgradeable::upgradeable_cpt::Event",
+          "kind": "nested"
+        },
+        {
+          "name": "WorldProviderEvent",
+          "type": "dojo::contract::components::world_provider::world_provider_cpt::Event",
+          "kind": "nested"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "neon_sentinel::systems::claim_coins::claim_coins::e_CoinClaimed::Event",
+      "kind": "enum",
+      "variants": []
+    },
+    {
+      "type": "interface",
+      "name": "neon_sentinel::systems::end_run::IEndRun",
+      "items": [
+        {
+          "type": "function",
+          "name": "end_run",
+          "inputs": [
+            {
+              "name": "run_id",
+              "type": "core::integer::u256"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "neon_sentinel::systems::end_run::end_run::Event",
+      "kind": "enum",
+      "variants": [
+        {
+          "name": "UpgradeableEvent",
+          "type": "dojo::contract::components::upgradeable::upgradeable_cpt::Event",
+          "kind": "nested"
+        },
+        {
+          "name": "WorldProviderEvent",
+          "type": "dojo::contract::components::world_provider::world_provider_cpt::Event",
+          "kind": "nested"
+        }
+      ]
+    },
+    {
+      "type": "interface",
+      "name": "neon_sentinel::systems::execute_tick::IExecuteTick",
+      "items": [
+        {
+          "type": "function",
+          "name": "execute_tick",
+          "inputs": [
+            {
+              "name": "run_id",
+              "type": "core::integer::u256"
+            },
+            {
+              "name": "player_input",
+              "type": "core::integer::u8"
+            },
+            {
+              "name": "sig_r",
+              "type": "core::integer::u256"
+            },
+            {
+              "name": "sig_s",
+              "type": "core::integer::u256"
+            },
+            {
+              "name": "enemy_ids",
+              "type": "core::array::Array::<core::integer::u256>"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "neon_sentinel::systems::execute_tick::execute_tick::Event",
+      "kind": "enum",
+      "variants": [
+        {
+          "name": "UpgradeableEvent",
+          "type": "dojo::contract::components::upgradeable::upgradeable_cpt::Event",
+          "kind": "nested"
+        },
+        {
+          "name": "WorldProviderEvent",
+          "type": "dojo::contract::components::world_provider::world_provider_cpt::Event",
+          "kind": "nested"
+        }
+      ]
+    },
+    {
+      "type": "interface",
+      "name": "neon_sentinel::systems::hit_registration::IHitRegistration",
+      "items": [
+        {
+          "type": "function",
+          "name": "hit_registration",
+          "inputs": [
+            {
+              "name": "run_id",
+              "type": "core::integer::u256"
+            },
+            {
+              "name": "enemy_id",
+              "type": "core::integer::u256"
+            },
+            {
+              "name": "damage",
+              "type": "core::integer::u32"
+            },
+            {
+              "name": "player_x",
+              "type": "core::integer::u32"
+            },
+            {
+              "name": "player_y",
+              "type": "core::integer::u32"
+            },
+            {
+              "name": "hit_proof",
+              "type": "core::integer::u256"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "neon_sentinel::systems::hit_registration::hit_registration::Event",
+      "kind": "enum",
+      "variants": [
+        {
+          "name": "UpgradeableEvent",
+          "type": "dojo::contract::components::upgradeable::upgradeable_cpt::Event",
+          "kind": "nested"
+        },
+        {
+          "name": "WorldProviderEvent",
+          "type": "dojo::contract::components::world_provider::world_provider_cpt::Event",
+          "kind": "nested"
+        }
+      ]
+    },
+    {
+      "type": "interface",
+      "name": "neon_sentinel::systems::init_game::IInitGame",
+      "items": [
+        {
+          "type": "function",
+          "name": "init_game",
+          "inputs": [
+            {
+              "name": "kernel",
+              "type": "core::integer::u8"
+            },
+            {
+              "name": "pregame_upgrades_mask",
+              "type": "core::integer::u256"
+            },
+            {
+              "name": "expected_cost",
+              "type": "core::integer::u32"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "neon_sentinel::systems::init_game::init_game::CoinSpent",
+      "members": [
+        {
+          "name": "player",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "name": "amount",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "reason",
+          "type": "core::felt252"
+        },
+        {
+          "name": "block_number",
+          "type": "core::integer::u64"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "neon_sentinel::systems::init_game::init_game::CoinSpentValue",
+      "members": [
+        {
+          "name": "amount",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "reason",
+          "type": "core::felt252"
+        },
+        {
+          "name": "block_number",
+          "type": "core::integer::u64"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "neon_sentinel::systems::init_game::init_game::Event",
+      "kind": "enum",
+      "variants": [
+        {
+          "name": "UpgradeableEvent",
+          "type": "dojo::contract::components::upgradeable::upgradeable_cpt::Event",
+          "kind": "nested"
+        },
+        {
+          "name": "WorldProviderEvent",
+          "type": "dojo::contract::components::world_provider::world_provider_cpt::Event",
+          "kind": "nested"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "neon_sentinel::systems::init_game::init_game::e_CoinSpent::Event",
+      "kind": "enum",
+      "variants": []
+    },
+    {
+      "type": "interface",
+      "name": "neon_sentinel::systems::spend_coins::ISpendCoins",
+      "items": [
+        {
+          "type": "function",
+          "name": "spend_coins",
+          "inputs": [
+            {
+              "name": "amount",
+              "type": "core::integer::u32"
+            },
+            {
+              "name": "reason",
+              "type": "core::felt252"
+            }
+          ],
+          "outputs": [
+            {
+              "type": "core::bool"
+            }
+          ],
+          "state_mutability": "external"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "neon_sentinel::systems::spend_coins::spend_coins::Event",
+      "kind": "enum",
+      "variants": [
+        {
+          "name": "UpgradeableEvent",
+          "type": "dojo::contract::components::upgradeable::upgradeable_cpt::Event",
+          "kind": "nested"
+        },
+        {
+          "name": "WorldProviderEvent",
+          "type": "dojo::contract::components::world_provider::world_provider_cpt::Event",
+          "kind": "nested"
+        }
+      ]
+    },
+    {
+      "type": "interface",
+      "name": "neon_sentinel::systems::submit_leaderboard::ISubmitLeaderboard",
+      "items": [
+        {
+          "type": "function",
+          "name": "submit_leaderboard",
+          "inputs": [
+            {
+              "name": "run_id",
+              "type": "core::integer::u256"
+            },
+            {
+              "name": "week",
+              "type": "core::integer::u32"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "neon_sentinel::systems::submit_leaderboard::submit_leaderboard::Event",
+      "kind": "enum",
+      "variants": [
+        {
+          "name": "UpgradeableEvent",
+          "type": "dojo::contract::components::upgradeable::upgradeable_cpt::Event",
+          "kind": "nested"
+        },
+        {
+          "name": "WorldProviderEvent",
+          "type": "dojo::contract::components::world_provider::world_provider_cpt::Event",
+          "kind": "nested"
+        }
+      ]
     }
   ]
 }
