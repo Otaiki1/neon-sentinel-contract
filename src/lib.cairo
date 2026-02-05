@@ -12,5 +12,6 @@ pub mod systems {
 pub mod models;
 
 pub mod tests {
+    mod test_systems_integration;
     mod test_world;
 }
