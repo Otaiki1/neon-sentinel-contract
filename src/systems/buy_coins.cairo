@@ -244,17 +244,18 @@ pub mod buy_coins {
                 'Exceeds available',
             );
 
-            let token = neon_sentinel::erc20::IERC20Dispatcher {
-                contract_address: config.strk_token_address,
-            };
-            let ok = token.transfer(owner, amount_strk);
-            assert(ok, 'STRK transfer failed');
-
+            // Checks-effects-interactions: update state before external call (reentrancy safety)
             let withdrawal_id = config.next_withdrawal_id;
             config.total_strk_withdrawn = config.total_strk_withdrawn + amount_strk;
             config.last_updated = block_number;
             config.next_withdrawal_id = config.next_withdrawal_id + u256 { low: 1, high: 0 };
             world.write_model(@config);
+
+            let token = neon_sentinel::erc20::IERC20Dispatcher {
+                contract_address: config.strk_token_address,
+            };
+            let ok = token.transfer(owner, amount_strk);
+            assert(ok, 'STRK transfer failed');
 
             let request = WithdrawalRequest {
                 withdrawal_id,
@@ -368,15 +369,16 @@ pub mod buy_coins {
                 'Exceeds available',
             );
 
+            // Checks-effects-interactions: update state before external call (reentrancy safety)
+            config.total_strk_withdrawn = config.total_strk_withdrawn + amount;
+            config.last_updated = block_number;
+            world.write_model(@config);
+
             let token = neon_sentinel::erc20::IERC20Dispatcher {
                 contract_address: config.strk_token_address,
             };
             let ok = token.transfer(owner, amount);
             assert(ok, 'STRK transfer failed');
-
-            config.total_strk_withdrawn = config.total_strk_withdrawn + amount;
-            config.last_updated = block_number;
-            world.write_model(@config);
 
             request.status = WITHDRAWAL_STATUS_EXECUTED;
             request.executed_block = block_number;
