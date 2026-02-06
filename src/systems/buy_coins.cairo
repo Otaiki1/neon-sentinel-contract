@@ -2,7 +2,6 @@
 
 use core::integer::u256;
 
-const MAX_STRK_PER_TX: u256 = u256 { low: 1000, high: 0 }; // 1000 STRK max per transaction
 const ZERO_FELT: felt252 = 0;
 
 const WITHDRAWAL_STATUS_EXECUTED: u8 = 2;
@@ -20,12 +19,16 @@ pub mod buy_coins {
     use dojo::model::ModelStorage;
     use starknet::{ContractAddress, get_caller_address, get_contract_address, get_execution_info};
 
-    use super::{MAX_STRK_PER_TX, WITHDRAWAL_STATUS_EXECUTED, ZERO_FELT};
+    use super::{WITHDRAWAL_STATUS_EXECUTED, ZERO_FELT};
     use super::IBuyCoins;
     use neon_sentinel::erc20::IERC20DispatcherTrait;
     use neon_sentinel::models::{
         CoinPurchaseHistory, CoinPurchaseRecord, CoinShopGlobal, TokenPurchaseConfig,
         PlayerProfile, WithdrawalRequest,
+    };
+    use neon_sentinel::token_validation::{
+        CalculateCoinsFromStrkTrait, CheckStrkAllowanceTrait, CheckStrkBalanceTrait,
+        ValidateStrkAmountTrait, VerifyTransferSucceededTrait,
     };
 
     fn zero_u256() -> u256 {
@@ -79,22 +82,15 @@ pub mod buy_coins {
             assert(config.is_enabled, 'Purchasing disabled');
             assert(!config.paused, 'Purchasing paused');
 
-            // 3. Validate amount > 0
-            assert(amount_strk.low > 0 || amount_strk.high > 0, 'Amount must be positive');
+            // 3. Validate STRK amount (> 0, <= max, no overflow when * 5)
+            assert(ValidateStrkAmountTrait::validate_strk_amount(amount_strk), 'Invalid STRK amount');
 
-            // 4. Validate max purchase limit (e.g. 1000 STRK per tx)
-            assert(
-                amount_strk.high < MAX_STRK_PER_TX.high
-                    || (amount_strk.high == MAX_STRK_PER_TX.high
-                        && amount_strk.low <= MAX_STRK_PER_TX.low),
-                'Exceeds max per transaction',
-            );
-
-            // 5. Calculate coins to mint: amount_strk * exchange_rate (overflow-safe)
-            let rate_u128: u128 = config.coin_exchange_rate.try_into().unwrap();
-            let rate_u256 = u256 { low: rate_u128, high: 0 };
+            // 4. Calculate coins: amount_strk * exchange_rate (overflow-safe)
             let (coins_to_mint, overflow) =
-                core::integer::u256_overflowing_mul(amount_strk, rate_u256);
+                CalculateCoinsFromStrkTrait::calculate_coins_from_strk(
+                    amount_strk,
+                    config.coin_exchange_rate,
+                );
             assert(!overflow, 'Exchange overflow');
 
             // SECURITY: Reject client manipulation — only accept exact calculated amount
@@ -109,14 +105,34 @@ pub mod buy_coins {
             let coins_u32: u32 = coins_to_mint.low.try_into().unwrap();
             assert(coins_u32 > 0, 'No coins to mint');
 
+            // 5. Check balance and allowance before transfer
+            assert(
+                CheckStrkBalanceTrait::check_strk_balance(
+                    config.strk_token_address,
+                    caller,
+                    amount_strk,
+                ),
+                'Insufficient STRK balance',
+            );
+            assert(
+                CheckStrkAllowanceTrait::check_strk_allowance(
+                    config.strk_token_address,
+                    caller,
+                    this_contract,
+                    amount_strk,
+                ),
+                'Approve STRK first',
+            );
+
             // 6. Transfer STRK from player to this contract
             let token = neon_sentinel::erc20::IERC20Dispatcher {
                 contract_address: config.strk_token_address,
             };
             let ok = token.transfer_from(caller, this_contract, amount_strk);
-            assert(ok, 'STRK transfer failed');
-
-            // 7. Verify transfer succeeded (ok is true from above)
+            assert(
+                VerifyTransferSucceededTrait::verify_transfer_succeeded(ok),
+                'STRK transfer failed',
+            );
 
             // 8. Get or create profile and add coins
             let mut profile: PlayerProfile = world.read_model(caller);

@@ -15,6 +15,7 @@ pub mod systems {
 
 pub mod erc20;
 pub mod models;
+pub mod token_validation;
 
 pub mod tests {
     mod test_systems_integration;
