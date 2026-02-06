@@ -222,6 +222,16 @@ pub struct PlayerProfile {
 
 // ============== Token purchase & treasury models ==============
 
+/// Single-row pointer to the coin shop owner (so systems can resolve TokenPurchaseConfig by owner).
+#[derive(Copy, Drop, Serde, Debug)]
+#[dojo::model]
+pub struct CoinShopGlobal {
+    #[key]
+    /// Use 0 for the single global row.
+    pub global_key: felt252,
+    pub owner: ContractAddress,
+}
+
 /// Global config for STRK → in-game coin purchasing. SECURITY: only owner can modify.
 #[derive(Copy, Drop, Serde, Debug)]
 #[dojo::model]
