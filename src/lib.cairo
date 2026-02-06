@@ -19,6 +19,7 @@ pub mod owner_access;
 pub mod token_validation;
 
 pub mod tests {
+    mod test_coin_shop;
     mod test_systems_integration;
     mod test_world;
 }
