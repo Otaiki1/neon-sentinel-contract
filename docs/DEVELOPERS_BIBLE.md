@@ -110,9 +110,9 @@ stateDiagram-v2
 ### 2.3 Run Identity and Determinism
 
 - **run_id:** Computed in `init_game` from `block_number`, `block_timestamp`, and caller. Formula:
-  - `low = block_number + block_timestamp * 2^64`
-  - `high = 0`
-  - So run_id is a u256 that uniquely identifies the run and is **not** chosen by the client. Same block and caller ⇒ same run_id.
+    - `low = block_number + block_timestamp * 2^64`
+    - `high = 0`
+    - So run_id is a u256 that uniquely identifies the run and is **not** chosen by the client. Same block and caller ⇒ same run_id.
 - **Tick order:** `execute_tick` requires `tick_counter == total_ticks_processed` and `block_number > last_tick_block`. Thus ticks are strictly sequential and bound to increasing blocks; replay of the same tick at the same block is rejected.
 
 ---
@@ -123,124 +123,124 @@ Every model is a `#[dojo::model]` struct. Keys are marked with `#[key]` and uniq
 
 ### 3.1 Player
 
-| Field | Type | Semantics |
-|-------|------|-----------|
-| **player_address** | ContractAddress | Key. Caller identity. |
-| run_id | u256 | Current run; set at init, unchanged until next init. |
-| is_active | bool | True iff this player has an active run. |
-| x, y | u32 | Position in world; updated only by execute_tick. |
-| lives, max_lives | u8 | Lives and cap; lives only decrease (execute_tick collision). |
-| kernel | u8 | Kernel index 0..5; set at init, never changed mid-run. |
-| invincible_until_block | u64 | Block until which player is invincible (set at init = block_number). |
-| overclock_meter, shock_bomb_meter, god_mode_meter | u32 | Ability meters; charged by gameplay, spent by actions. |
-| overclock_active, god_mode_active | bool | Active ability flags; consumed in execute_tick. |
-| upgrades_verified | bool | Set true at init; locks upgrades for the run. |
-| tick_counter | u32 | Number of ticks this player has processed; must match RunState.total_ticks_processed. |
-| last_tick_block | u64 | Block of last processed tick; must be strictly less than next execute_tick block. |
+| Field                                             | Type            | Semantics                                                                             |
+| ------------------------------------------------- | --------------- | ------------------------------------------------------------------------------------- |
+| **player_address**                                | ContractAddress | Key. Caller identity.                                                                 |
+| run_id                                            | u256            | Current run; set at init, unchanged until next init.                                  |
+| is_active                                         | bool            | True iff this player has an active run.                                               |
+| x, y                                              | u32             | Position in world; updated only by execute_tick.                                      |
+| lives, max_lives                                  | u8              | Lives and cap; lives only decrease (execute_tick collision).                          |
+| kernel                                            | u8              | Kernel index 0..5; set at init, never changed mid-run.                                |
+| invincible_until_block                            | u64             | Block until which player is invincible (set at init = block_number).                  |
+| overclock_meter, shock_bomb_meter, god_mode_meter | u32             | Ability meters; charged by gameplay, spent by actions.                                |
+| overclock_active, god_mode_active                 | bool            | Active ability flags; consumed in execute_tick.                                       |
+| upgrades_verified                                 | bool            | Set true at init; locks upgrades for the run.                                         |
+| tick_counter                                      | u32             | Number of ticks this player has processed; must match RunState.total_ticks_processed. |
+| last_tick_block                                   | u64             | Block of last processed tick; must be strictly less than next execute_tick block.     |
 
 **Writers:** init_game (create/overwrite), execute_tick (update position, lives, meters, tick_counter, last_tick_block).  
 **Invariants:** `lives <= max_lives`; `tick_counter` and `last_tick_block` are monotonic during a run; position within [0, WORLD_MAX_X/Y].
 
 ### 3.2 RunState
 
-| Field | Type | Semantics |
-|-------|------|-----------|
-| **player_address**, **run_id** | ContractAddress, u256 | Composite key. |
-| current_layer, current_prestige | u8 | Layer 1..MAX_LAYER; prestige for future use. |
-| score | u64 | Only increased by execute_tick (collision kills) and hit_registration (kills). |
-| combo_multiplier | u32 | 1000 = 1.0x; increased on kill (COMBO_STEP), capped at COMBO_MAX. |
-| corruption_level, corruption_multiplier | u32 | Corruption mechanic; updated in execute_tick. |
-| started_at_block, last_tick_block | u64 | Block bounds of the run. |
-| total_ticks_processed | u32 | Number of execute_tick calls; must match Player.tick_counter. |
-| enemies_defeated, shots_fired, shots_hit, accuracy | u32 | Aggregates. |
-| is_finished | bool | Set true by end_run; thereafter run state is read-only for gameplay. |
-| final_score, final_layer | u64, u8 | Set by end_run; immutable after. |
-| submitted_to_leaderboard | bool | Set true by submit_leaderboard; at most once per run. |
+| Field                                              | Type                  | Semantics                                                                      |
+| -------------------------------------------------- | --------------------- | ------------------------------------------------------------------------------ |
+| **player_address**, **run_id**                     | ContractAddress, u256 | Composite key.                                                                 |
+| current_layer, current_prestige                    | u8                    | Layer 1..MAX_LAYER; prestige for future use.                                   |
+| score                                              | u64                   | Only increased by execute_tick (collision kills) and hit_registration (kills). |
+| combo_multiplier                                   | u32                   | 1000 = 1.0x; increased on kill (COMBO_STEP), capped at COMBO_MAX.              |
+| corruption_level, corruption_multiplier            | u32                   | Corruption mechanic; updated in execute_tick.                                  |
+| started_at_block, last_tick_block                  | u64                   | Block bounds of the run.                                                       |
+| total_ticks_processed                              | u32                   | Number of execute_tick calls; must match Player.tick_counter.                  |
+| enemies_defeated, shots_fired, shots_hit, accuracy | u32                   | Aggregates.                                                                    |
+| is_finished                                        | bool                  | Set true by end_run; thereafter run state is read-only for gameplay.           |
+| final_score, final_layer                           | u64, u8               | Set by end_run; immutable after.                                               |
+| submitted_to_leaderboard                           | bool                  | Set true by submit_leaderboard; at most once per run.                          |
 
-**Writers:** init_game (create), execute_tick (update), hit_registration (update), end_run (set finished + final_*), submit_leaderboard (set submitted_to_leaderboard only).  
+**Writers:** init*game (create), execute_tick (update), hit_registration (update), end_run (set finished + final*\*), submit_leaderboard (set submitted_to_leaderboard only).  
 **Invariants:** After `is_finished == true`, no system modifies score, layer, ticks, or enemies_defeated; only `submitted_to_leaderboard` may be set to true.
 
 ### 3.3 Enemy
 
-| Field | Type | Semantics |
-|-------|------|-----------|
-| **enemy_id** | u256 | Key. Unique per enemy instance. |
-| run_id, player_address | u256, ContractAddress | Owner run and player. |
-| enemy_type | u8 | Type identifier (e.g. 1..10). |
-| health, max_health | u32 | Health; only decreased by hit_registration (or set 0 on kill). |
-| x, y | u32 | Position; updated by execute_tick (deterministic delta from run_id + tick + index). |
-| is_active | bool | False after death (hit_registration or execute_tick collision). |
-| spawn_block, last_position_update_block, destroyed_at_block | u64 | Block timestamps. |
-| destruction_verified | bool | Set true when killed on-chain. |
+| Field                                                       | Type                  | Semantics                                                                           |
+| ----------------------------------------------------------- | --------------------- | ----------------------------------------------------------------------------------- |
+| **enemy_id**                                                | u256                  | Key. Unique per enemy instance.                                                     |
+| run_id, player_address                                      | u256, ContractAddress | Owner run and player.                                                               |
+| enemy_type                                                  | u8                    | Type identifier (e.g. 1..10).                                                       |
+| health, max_health                                          | u32                   | Health; only decreased by hit_registration (or set 0 on kill).                      |
+| x, y                                                        | u32                   | Position; updated by execute_tick (deterministic delta from run_id + tick + index). |
+| is_active                                                   | bool                  | False after death (hit_registration or execute_tick collision).                     |
+| spawn_block, last_position_update_block, destroyed_at_block | u64                   | Block timestamps.                                                                   |
+| destruction_verified                                        | bool                  | Set true when killed on-chain.                                                      |
 
 **Writers:** External spawn (not in core systems; tests use write_model_test), execute_tick (position, kill on collision), hit_registration (health, kill, events).  
 **Invariants:** Position is always updated by the contract; client cannot set position. Hit validity is checked against on-chain Player position and distance.
 
 ### 3.4 GameTick
 
-| Field | Type | Semantics |
-|-------|------|-----------|
-| **player_address**, **run_id**, **tick_number** | ContractAddress, u256, u32 | Composite key. |
-| block_number, timestamp | u64 | Block at which tick was processed. |
-| player_input | u8 | Low 3 bits direction, high bits action. |
-| input_sig | u256 | Placeholder for future input attestation. |
-| player_x, player_y | u32 | Position after this tick. |
-| score_delta, enemies_killed, damage_taken | u64, u32, u32 | Deltas this tick. |
-| combo_before, combo_after | u32 | Combo around this tick. |
-| state_hash_before, state_hash_after, tick_hash | u256 | For replay and verification. |
+| Field                                           | Type                       | Semantics                                 |
+| ----------------------------------------------- | -------------------------- | ----------------------------------------- |
+| **player_address**, **run_id**, **tick_number** | ContractAddress, u256, u32 | Composite key.                            |
+| block_number, timestamp                         | u64                        | Block at which tick was processed.        |
+| player_input                                    | u8                         | Low 3 bits direction, high bits action.   |
+| input_sig                                       | u256                       | Placeholder for future input attestation. |
+| player_x, player_y                              | u32                        | Position after this tick.                 |
+| score_delta, enemies_killed, damage_taken       | u64, u32, u32              | Deltas this tick.                         |
+| combo_before, combo_after                       | u32                        | Combo around this tick.                   |
+| state_hash_before, state_hash_after, tick_hash  | u256                       | For replay and verification.              |
 
 **Writers:** execute_tick only; one row per (player, run_id, tick_number).  
 **Invariants:** tick_number is sequential; submit_leaderboard may require the last tick to exist for replay_verifiable.
 
 ### 3.5 GameEvent
 
-| Field | Type | Semantics |
-|-------|------|-----------|
-| **event_id** | u256 | Key. Deterministic from run_id, entity, block, event_type. |
-| run_id, player_address | u256, ContractAddress | Context. |
-| event_type | u8 | 1=hit, 2=powerup, 3=layer, 6=game_start, 7=game_end. |
-| tick_number, block_number | u32, u64 | When. |
-| entity_id, data_primary, data_secondary | u256 | Payload (e.g. enemy_id, damage, combo). |
-| game_state_hash_before, game_state_hash_after | u256 | Optional verification. |
-| verified | bool | Reserved. |
+| Field                                         | Type                  | Semantics                                                  |
+| --------------------------------------------- | --------------------- | ---------------------------------------------------------- |
+| **event_id**                                  | u256                  | Key. Deterministic from run_id, entity, block, event_type. |
+| run_id, player_address                        | u256, ContractAddress | Context.                                                   |
+| event_type                                    | u8                    | 1=hit, 2=powerup, 3=layer, 6=game_start, 7=game_end.       |
+| tick_number, block_number                     | u32, u64              | When.                                                      |
+| entity_id, data_primary, data_secondary       | u256                  | Payload (e.g. enemy_id, damage, combo).                    |
+| game_state_hash_before, game_state_hash_after | u256                  | Optional verification.                                     |
+| verified                                      | bool                  | Reserved.                                                  |
 
 **Writers:** init_game (game_start), hit_registration (hit, powerup, layer), end_run (game_end). Append-only.
 
 ### 3.6 LeaderboardEntry
 
-| Field | Type | Semantics |
-|-------|------|-----------|
-| **entry_id** | u256 | Key. Deterministic: run_id.low + week, run_id.high. |
-| player_address, player_name | ContractAddress, felt252 | Player; name placeholder. |
-| week | u32 | Leaderboard week = block_number / BLOCKS_PER_WEEK. |
-| final_score, deepest_layer, prestige_level | u64, u8, u8 | From RunState at submit. |
-| survival_blocks | u64 | last_tick_block - started_at_block. |
-| max_corruption, enemies_defeated, peak_combo, accuracy | u32 | Run stats. |
-| run_id | u256 | Submitted run. |
-| submission_block | u64 | Block at which submitted. |
-| submission_hash | u256 | state_hash_for_run(RunState) at submit. |
-| event_log_hash | u256 | Placeholder for event chain hash. |
-| game_seed | u256 | Same as run_id (run_id is the seed). |
-| replay_verifiable | bool | True if at least one GameTick exists. |
-| tick_count, aberrations_detected | u32 | Tick count; aberrations reserved. |
-| verified | bool | Set true on submit. |
+| Field                                                  | Type                     | Semantics                                           |
+| ------------------------------------------------------ | ------------------------ | --------------------------------------------------- |
+| **entry_id**                                           | u256                     | Key. Deterministic: run_id.low + week, run_id.high. |
+| player_address, player_name                            | ContractAddress, felt252 | Player; name placeholder.                           |
+| week                                                   | u32                      | Leaderboard week = block_number / BLOCKS_PER_WEEK.  |
+| final_score, deepest_layer, prestige_level             | u64, u8, u8              | From RunState at submit.                            |
+| survival_blocks                                        | u64                      | last_tick_block - started_at_block.                 |
+| max_corruption, enemies_defeated, peak_combo, accuracy | u32                      | Run stats.                                          |
+| run_id                                                 | u256                     | Submitted run.                                      |
+| submission_block                                       | u64                      | Block at which submitted.                           |
+| submission_hash                                        | u256                     | state_hash_for_run(RunState) at submit.             |
+| event_log_hash                                         | u256                     | Placeholder for event chain hash.                   |
+| game_seed                                              | u256                     | Same as run_id (run_id is the seed).                |
+| replay_verifiable                                      | bool                     | True if at least one GameTick exists.               |
+| tick_count, aberrations_detected                       | u32                      | Tick count; aberrations reserved.                   |
+| verified                                               | bool                     | Set true on submit.                                 |
 
 **Writers:** submit_leaderboard only. Entry is immutable after creation.
 
 ### 3.7 PlayerProfile
 
-| Field | Type | Semantics |
-|-------|------|-----------|
-| **player_address** | ContractAddress | Key. |
-| current_prestige, current_layer, highest_prestige_reached | u8 | Progress. |
-| is_prime_sentinel | bool | Flag. |
-| total_runs, lifetime_score, lifetime_playtime_blocks, ... | u32/u64 | Aggregates. |
-| coins | u32 | Balance; increased by claim_coins, decreased by init_game/spend_coins. |
-| last_coin_claim_block | u64 | Last claim block; claim_coins requires block - this >= 7200. |
-| coin_transaction_log_hash | u256 | Append-only hash chain of coin ops. |
-| coin_transaction_count | u32 | Number of coin transactions. |
-| selected_kernel, kernel_unlocks, avatar_unlocks, cosmetic_unlocks | u8/u64 | Unlocks. |
-| last_profile_update_block, profile_hash | u64, u256 | Metadata. |
+| Field                                                             | Type            | Semantics                                                              |
+| ----------------------------------------------------------------- | --------------- | ---------------------------------------------------------------------- |
+| **player_address**                                                | ContractAddress | Key.                                                                   |
+| current_prestige, current_layer, highest_prestige_reached         | u8              | Progress.                                                              |
+| is_prime_sentinel                                                 | bool            | Flag.                                                                  |
+| total_runs, lifetime_score, lifetime_playtime_blocks, ...         | u32/u64         | Aggregates.                                                            |
+| coins                                                             | u32             | Balance; increased by claim_coins, decreased by init_game/spend_coins. |
+| last_coin_claim_block                                             | u64             | Last claim block; claim_coins requires block - this >= 7200.           |
+| coin_transaction_log_hash                                         | u256            | Append-only hash chain of coin ops.                                    |
+| coin_transaction_count                                            | u32             | Number of coin transactions.                                           |
+| selected_kernel, kernel_unlocks, avatar_unlocks, cosmetic_unlocks | u8/u64          | Unlocks.                                                               |
+| last_profile_update_block, profile_hash                           | u64, u256       | Metadata.                                                              |
 
 **Writers:** init_game (coins, log hash, count), claim_coins (coins, last_coin_claim_block, log hash, count), spend_coins (coins, log hash, count). Profile is created/updated by systems or by world setup; clients cannot write.
 
@@ -251,8 +251,8 @@ Every model is a `#[dojo::model]` struct. Keys are marked with `#[key]` and uniq
 ### 4.1 init_game
 
 - **Purpose:** Start a new run: create Player and RunState, optionally spend coins on pregame upgrades, emit game_start.
-- **run_id:** `compute_run_seed(block_number, block_timestamp, caller)` → u256 with low = block_number + block_timestamp * 2^64, high = 0.
-- **Upgrade cost:** `compute_upgrade_cost(mask)` = popcount(mask) * COIN_PER_UPGRADE (1). Client must pass the same value as `expected_cost`; contract asserts equality.
+- **run_id:** `compute_run_seed(block_number, block_timestamp, caller)` → u256 with low = block_number + block_timestamp \* 2^64, high = 0.
+- **Upgrade cost:** `compute_upgrade_cost(mask)` = popcount(mask) \* COIN_PER_UPGRADE (1). Client must pass the same value as `expected_cost`; contract asserts equality.
 - **Coin accounting:** If expected_cost > 0, profile.coins is decreased, coin_transaction_log_hash is updated with `next_coin_log_hash(prev, block_number, amount)`, coin_transaction_count incremented, and a CoinSpent-style event emitted (reason: pregame_upgrades).
 - **Initial state:** Player at (0,0), lives 3, max_lives 20, combo 1000, layer 1, invincible_until_block = block_number, tick_counter 0; RunState score 0, is_finished false, submitted_to_leaderboard false.
 
@@ -301,33 +301,33 @@ Every model is a `#[dojo::model]` struct. Keys are marked with `#[key]` and uniq
 
 ### 5.1 Constants Table
 
-| Constant | Value | Location | Purpose |
-|----------|--------|----------|---------|
-| MAX_KERNEL | 5 | init_game | Valid kernel range 0..5 |
-| COIN_PER_UPGRADE | 1 | init_game | Coins per upgrade bit |
-| START_X, START_Y | 0, 0 | init_game | Initial position |
-| START_LIVES, MAX_LIVES | 3, 20 | init_game | Lives |
-| COMBO_ONE | 1000 | init_game, execute_tick, hit_registration | 1.0x combo basis |
-| BLOCKS_PER_DAY | 7200 | claim_coins | 24h cooldown |
-| COINS_PER_CLAIM | 3 | claim_coins | Coins per claim |
-| BLOCKS_PER_WEEK | 50400 | submit_leaderboard | Week length in blocks |
-| MAX_HIT_RANGE, MAX_HIT_RANGE_SQ | 50, 2500 | hit_registration | Hit validity |
-| COMBO_STEP, COMBO_MAX | 50, 5000 | hit_registration | Combo step and cap |
-| MAX_LAYER | 6 | hit_registration | Layers 1..6 |
-| WORLD_MAX_X, WORLD_MAX_Y | 1000 | execute_tick | World bounds |
-| COLLISION_RADIUS | 8 | execute_tick | Collision distance |
-| DAMAGE_PER_HIT | 1 | execute_tick | Damage per collision |
-| MAX_ENEMIES_PER_TICK | 32 | execute_tick | Max enemies per tick |
-| EVENT_TYPE_HIT/POWERUP/LAYER/GAME_START/GAME_END | 1,2,3,6,7 | multiple | GameEvent types |
+| Constant                                         | Value     | Location                                  | Purpose                 |
+| ------------------------------------------------ | --------- | ----------------------------------------- | ----------------------- |
+| MAX_KERNEL                                       | 5         | init_game                                 | Valid kernel range 0..5 |
+| COIN_PER_UPGRADE                                 | 1         | init_game                                 | Coins per upgrade bit   |
+| START_X, START_Y                                 | 0, 0      | init_game                                 | Initial position        |
+| START_LIVES, MAX_LIVES                           | 3, 20     | init_game                                 | Lives                   |
+| COMBO_ONE                                        | 1000      | init_game, execute_tick, hit_registration | 1.0x combo basis        |
+| BLOCKS_PER_DAY                                   | 7200      | claim_coins                               | 24h cooldown            |
+| COINS_PER_CLAIM                                  | 3         | claim_coins                               | Coins per claim         |
+| BLOCKS_PER_WEEK                                  | 50400     | submit_leaderboard                        | Week length in blocks   |
+| MAX_HIT_RANGE, MAX_HIT_RANGE_SQ                  | 50, 2500  | hit_registration                          | Hit validity            |
+| COMBO_STEP, COMBO_MAX                            | 50, 5000  | hit_registration                          | Combo step and cap      |
+| MAX_LAYER                                        | 6         | hit_registration                          | Layers 1..6             |
+| WORLD_MAX_X, WORLD_MAX_Y                         | 1000      | execute_tick                              | World bounds            |
+| COLLISION_RADIUS                                 | 8         | execute_tick                              | Collision distance      |
+| DAMAGE_PER_HIT                                   | 1         | execute_tick                              | Damage per collision    |
+| MAX_ENEMIES_PER_TICK                             | 32        | execute_tick                              | Max enemies per tick    |
+| EVENT_TYPE_HIT/POWERUP/LAYER/GAME_START/GAME_END | 1,2,3,6,7 | multiple                                  | GameEvent types         |
 
 ### 5.2 Key Formulas
 
 - **run_id (init_game):** `low = block_number + block_timestamp * 2^64`, `high = 0`.
 - **Upgrade cost:** `cost = popcount(pregame_upgrades_mask) * 1`.
 - **Coin log hash (append):** `next_coin_log_hash(prev, block_number, amount)` → low = prev.low + block_number + amount, high = prev.high + 1.
-- **state_hash_for_run (end_run, submit_leaderboard):** low = score + final_layer * 2^32, high = total_ticks_processed + corruption_level * 2^32.
+- **state_hash_for_run (end_run, submit_leaderboard):** low = score + final_layer _ 2^32, high = total_ticks_processed + corruption_level _ 2^32.
 - **entry_id:** low = run_id.low + week, high = run_id.high.
-- **Kernel damage mod:** 1000 + kernel * 50 (kernel 0..5).
+- **Kernel damage mod:** 1000 + kernel \* 50 (kernel 0..5).
 - **Layer threshold (layer 1..5):** 1000, 5000, 15000, 40000, 100000 for advancing to layer 2..6.
 
 ---
@@ -342,20 +342,20 @@ Every model is a `#[dojo::model]` struct. Keys are marked with `#[key]` and uniq
 
 ### 6.2 Threat Mitigations
 
-| Threat | Mitigation |
-|--------|------------|
-| Replay of the same tick | execute_tick requires block_number > last_tick_block and sequential tick_counter. |
-| Position spoofing (fake hit from far away) | hit_registration asserts on-chain player.x/y equal client-supplied x/y and distance_sq <= 2500. |
-| Score injection | Score only changes in execute_tick (collision) and hit_registration (kill); no client-supplied score. |
-| Double leaderboard submission | submit_leaderboard asserts !submitted_to_leaderboard; sets it true after write. |
-| Time travel (claim coins early) | claim_coins requires block - last_coin_claim_block >= 7200 (or first claim). |
-| Upgrade tampering mid-run | upgrades_verified set at init; no system changes upgrades during run. |
-| Infinite lives | Lives only decrease in execute_tick; no system sets lives above max_lives; no client-writable Player. |
-| Modify run after finish | No system writes to RunState gameplay fields after is_finished; submit_leaderboard only sets submitted_to_leaderboard. |
+| Threat                                     | Mitigation                                                                                                             |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| Replay of the same tick                    | execute_tick requires block_number > last_tick_block and sequential tick_counter.                                      |
+| Position spoofing (fake hit from far away) | hit_registration asserts on-chain player.x/y equal client-supplied x/y and distance_sq <= 2500.                        |
+| Score injection                            | Score only changes in execute_tick (collision) and hit_registration (kill); no client-supplied score.                  |
+| Double leaderboard submission              | submit_leaderboard asserts !submitted_to_leaderboard; sets it true after write.                                        |
+| Time travel (claim coins early)            | claim_coins requires block - last_coin_claim_block >= 7200 (or first claim).                                           |
+| Upgrade tampering mid-run                  | upgrades_verified set at init; no system changes upgrades during run.                                                  |
+| Infinite lives                             | Lives only decrease in execute_tick; no system sets lives above max_lives; no client-writable Player.                  |
+| Modify run after finish                    | No system writes to RunState gameplay fields after is_finished; submit_leaderboard only sets submitted_to_leaderboard. |
 
 ### 6.3 Invariants (Summary)
 
-- **Run lifecycle:** init_game → (execute_tick | hit_registration)* → end_run → [submit_leaderboard]. No backward transitions.
+- **Run lifecycle:** init_game → (execute_tick | hit_registration)\* → end_run → [submit_leaderboard]. No backward transitions.
 - **Score and combo:** Only increase via defined kill paths; no direct setter.
 - **Position:** Player position only in execute_tick; enemy position only in execute_tick and hit_registration (no client-set positions).
 - **Coins:** Balance changes only via claim_coins (add), init_game (subtract for upgrades), spend_coins (subtract); all coin moves update log hash and count.

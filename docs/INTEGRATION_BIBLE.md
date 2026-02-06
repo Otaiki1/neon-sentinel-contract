@@ -6,11 +6,11 @@ This guide is for frontend and integration developers: how to call the world, re
 
 ## 1. Stack Overview
 
-| Component | Role |
-|-----------|------|
-| **Katana** | Local Starknet RPC (or use testnet/mainnet) |
-| **Sozo** | Build and migrate the Dojo world; execute system calls |
-| **Torii** | Indexer + GraphQL API for querying world state and events |
+| Component          | Role                                                               |
+| ------------------ | ------------------------------------------------------------------ |
+| **Katana**         | Local Starknet RPC (or use testnet/mainnet)                        |
+| **Sozo**           | Build and migrate the Dojo world; execute system calls             |
+| **Torii**          | Indexer + GraphQL API for querying world state and events          |
 | **World contract** | Dojo world; systems are separate contracts registered in the world |
 
 The frontend typically:
@@ -42,9 +42,9 @@ Start a new run.
 - **Contract:** `neon_sentinel-init_game`
 - **Method:** `init_game(kernel, pregame_upgrades_mask, expected_cost)`
 - **Parameters:**
-  - `kernel`: u8 — Kernel index 0..5
-  - `pregame_upgrades_mask`: u256 — Bitmask of upgrades (low/high 128-bit)
-  - `expected_cost`: u32 — Must equal coin cost of the mask (e.g. popcount × 1 coin per upgrade)
+    - `kernel`: u8 — Kernel index 0..5
+    - `pregame_upgrades_mask`: u256 — Bitmask of upgrades (low/high 128-bit)
+    - `expected_cost`: u32 — Must equal coin cost of the mask (e.g. popcount × 1 coin per upgrade)
 - **Preconditions:** No active run; sufficient coins if `expected_cost > 0`
 - **Effect:** Creates Player and RunState; deducts coins; emits game_start and (if cost > 0) coin-spend event
 
@@ -55,10 +55,10 @@ Process one game tick.
 - **Contract:** `neon_sentinel-execute_tick`
 - **Method:** `execute_tick(run_id, player_input, sig_r, sig_s, enemy_ids)`
 - **Parameters:**
-  - `run_id`: u256 — From current Player.run_id
-  - `player_input`: u8 — Low 3 bits: direction (0=idle, 1=left, 2=right, 3=up, 4=down); high bits: action (e.g. 0=none, 1=shoot, 2=overclock, …)
-  - `sig_r`, `sig_s`: u256 — Signature (placeholder for future auth)
-  - `enemy_ids`: Array<u256> — Enemies to process this tick (e.g. visible/active IDs)
+    - `run_id`: u256 — From current Player.run_id
+    - `player_input`: u8 — Low 3 bits: direction (0=idle, 1=left, 2=right, 3=up, 4=down); high bits: action (e.g. 0=none, 1=shoot, 2=overclock, …)
+    - `sig_r`, `sig_s`: u256 — Signature (placeholder for future auth)
+    - `enemy_ids`: Array<u256> — Enemies to process this tick (e.g. visible/active IDs)
 - **Preconditions:** Run active; run not finished; next tick sequential; block_number > last_tick_block
 - **Effect:** Updates Player (position, lives, meters), RunState, Enemies; writes GameTick
 
@@ -69,11 +69,11 @@ Register a bullet hit on an enemy.
 - **Contract:** `neon_sentinel-hit_registration`
 - **Method:** `hit_registration(run_id, enemy_id, damage, player_x, player_y, hit_proof)`
 - **Parameters:**
-  - `run_id`: u256
-  - `enemy_id`: u256
-  - `damage`: u32 — Base damage (kernel/upgrades applied on-chain)
-  - `player_x`, `player_y`: u32 — Must match current Player position (anti-spoof)
-  - `hit_proof`: u256 — Reserved for future proof
+    - `run_id`: u256
+    - `enemy_id`: u256
+    - `damage`: u32 — Base damage (kernel/upgrades applied on-chain)
+    - `player_x`, `player_y`: u32 — Must match current Player position (anti-spoof)
+    - `hit_proof`: u256 — Reserved for future proof
 - **Preconditions:** Run active; enemy exists, active, same run/player; distance ≤ 50; position matches
 - **Effect:** Reduces enemy health; on kill: score, combo, events (hit, powerup, layer)
 
@@ -94,8 +94,8 @@ Submit a finished run to the weekly leaderboard.
 - **Contract:** `neon_sentinel-submit_leaderboard`
 - **Method:** `submit_leaderboard(run_id, week)`
 - **Parameters:**
-  - `run_id`: u256
-  - `week`: u32 — Must equal current week: `floor(block_number / 50400)`
+    - `run_id`: u256
+    - `week`: u32 — Must equal current week: `floor(block_number / 50400)`
 - **Preconditions:** Run finished; not already submitted; week matches current block-based week
 - **Effect:** Creates LeaderboardEntry (immutable); sets submitted_to_leaderboard
 
@@ -179,10 +179,10 @@ Use Torii subscriptions or event filters to update the UI when a run advances, a
 
 - **Endpoint:** After `torii --world <WORLD_ADDRESS> ...`, Torii exposes HTTP and (if enabled) WebSocket. Default port and routes are in [Torii docs](https://book.dojoengine.org/toolchain/torii/overview).
 - **GraphQL:** Use the generated schema to query entities by keys or filters. Example patterns:
-  - Player by address: `Player { player_address, run_id, is_active, x, y, lives, ... }` where `player_address = "0x..."`
-  - RunState by player and run_id
-  - LeaderboardEntry by week or by player_address
-  - GameEvent by run_id or player_address
+    - Player by address: `Player { player_address, run_id, is_active, x, y, lives, ... }` where `player_address = "0x..."`
+    - RunState by player and run_id
+    - LeaderboardEntry by week or by player_address
+    - GameEvent by run_id or player_address
 - **Historical / SQL:** Torii can expose SQL for historical data (see `torii_dev.toml`); use for analytics or history views.
 
 ---
@@ -251,16 +251,16 @@ Map these to user-facing messages and disable/validate UI (e.g. “Wait X blocks
 
 ## 9. Numbers Quick Reference
 
-| Concept | Value |
-|--------|--------|
-| Coins per daily claim | 3 |
-| Blocks per day (claim cooldown) | 7200 |
-| Blocks per week (leaderboard) | 50400 |
-| Max hit distance | 50 (squared 2500) |
-| Kernel range | 0..5 |
-| Starting lives / max lives | 3 / 20 |
-| Combo 1.0x | 1000 (basis) |
-| Max layer | 6 |
+| Concept                         | Value             |
+| ------------------------------- | ----------------- |
+| Coins per daily claim           | 3                 |
+| Blocks per day (claim cooldown) | 7200              |
+| Blocks per week (leaderboard)   | 50400             |
+| Max hit distance                | 50 (squared 2500) |
+| Kernel range                    | 0..5              |
+| Starting lives / max lives      | 3 / 20            |
+| Combo 1.0x                      | 1000 (basis)      |
+| Max layer                       | 6                 |
 
 ---
 

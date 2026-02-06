@@ -220,6 +220,70 @@ pub struct PlayerProfile {
     pub profile_hash: u256,
 }
 
+// ============== Token purchase & treasury models ==============
+
+/// Global config for STRK → in-game coin purchasing. SECURITY: only owner can modify.
+#[derive(Copy, Drop, Serde, Debug)]
+#[dojo::model]
+pub struct TokenPurchaseConfig {
+    #[key]
+    pub owner: ContractAddress,
+    pub strk_token_address: ContractAddress,
+    pub coin_exchange_rate: u32,
+    pub total_strk_collected: u256,
+    pub total_coins_sold: u256,
+    pub is_enabled: bool,
+    pub paused: bool,
+    pub last_updated: u64,
+    pub collected_strk_version: u32,
+}
+
+/// Immutable record of a single coin purchase. Used for auditing and receipt verification.
+#[derive(Copy, Drop, Serde, Debug)]
+#[dojo::model]
+pub struct CoinPurchaseRecord {
+    #[key]
+    pub purchase_id: u256,
+    pub player_address: ContractAddress,
+    pub strk_amount: u256,
+    pub coins_received: u256,
+    pub purchase_block: u64,
+    pub purchase_timestamp: u64,
+    pub transaction_hash: u256,
+    pub verified: bool,
+}
+
+/// Per-player purchase history. Append-only; tracks spending and purchase behavior.
+#[derive(Copy, Drop, Serde, Debug)]
+#[dojo::model]
+pub struct CoinPurchaseHistory {
+    #[key]
+    pub player_address: ContractAddress,
+    pub total_strk_spent: u256,
+    pub total_coins_purchased: u256,
+    pub purchase_count: u32,
+    pub first_purchase_block: u64,
+    pub last_purchase_block: u64,
+    pub last_claimed_coins_block: u64,
+    pub verified_purchases: u32,
+}
+
+/// Owner withdrawal request. Audit trail for treasury management; status lifecycle.
+#[derive(Copy, Drop, Serde, Debug)]
+#[dojo::model]
+pub struct WithdrawalRequest {
+    #[key]
+    pub withdrawal_id: u256,
+    pub owner_address: ContractAddress,
+    pub strk_amount: u256,
+    pub requested_block: u64,
+    /// 0=pending, 1=approved, 2=executed, 3=rejected
+    pub status: u8,
+    pub executed_block: u64,
+    pub executed_at_transaction: u256,
+    pub notes: felt252,
+}
+
 // ============== Shared types (starter) ==============
 
 #[derive(Serde, Copy, Drop, Introspect, PartialEq, Debug, DojoStore, Default)]
