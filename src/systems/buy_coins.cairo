@@ -1,15 +1,22 @@
-//! buy_coins system: users purchase in-game coins with STRK. Main revenue system.
+//! buy_coins system: users purchase in-game coins with STRK; owner treasury and withdrawals.
 
 use core::integer::u256;
 
 const ZERO_FELT: felt252 = 0;
 
+const WITHDRAWAL_STATUS_PENDING: u8 = 0;
 const WITHDRAWAL_STATUS_EXECUTED: u8 = 2;
+/// Blocks to wait before execute_withdrawal (~10 min at ~6s/block).
+const WITHDRAWAL_DELAY_BLOCKS: u64 = 100;
 
 #[starknet::interface]
 pub trait IBuyCoins<T> {
     fn buy_coins(ref self: T, amount_strk: u256, max_coins_expected: u256) -> u256;
     fn withdraw_strk(ref self: T, amount_strk: u256, notes: felt252) -> u256;
+    fn get_treasury_balance(ref self: T) -> u256;
+    fn get_treasury_info(ref self: T) -> (u256, u256, u256, u256);
+    fn request_withdrawal(ref self: T, amount_strk: u256, notes: felt252) -> u256;
+    fn execute_withdrawal(ref self: T, withdrawal_id: u256) -> u256;
 }
 
 #[dojo::contract]
@@ -19,13 +26,16 @@ pub mod buy_coins {
     use dojo::model::ModelStorage;
     use starknet::{ContractAddress, get_caller_address, get_contract_address, get_execution_info};
 
-    use super::{WITHDRAWAL_STATUS_EXECUTED, ZERO_FELT};
+    use super::{
+        WITHDRAWAL_DELAY_BLOCKS, WITHDRAWAL_STATUS_EXECUTED, WITHDRAWAL_STATUS_PENDING, ZERO_FELT,
+    };
     use super::IBuyCoins;
     use neon_sentinel::erc20::IERC20DispatcherTrait;
     use neon_sentinel::models::{
         CoinPurchaseHistory, CoinPurchaseRecord, CoinShopGlobal, TokenPurchaseConfig,
         PlayerProfile, WithdrawalRequest,
     };
+    use neon_sentinel::owner_access::IsOwnerTrait;
     use neon_sentinel::token_validation::{
         CalculateCoinsFromStrkTrait, CheckStrkAllowanceTrait, CheckStrkBalanceTrait,
         ValidateStrkAmountTrait, VerifyTransferSucceededTrait,
@@ -61,6 +71,26 @@ pub mod buy_coins {
         pub amount: u256,
         pub withdrawal_id: u256,
         pub block_number: u64,
+    }
+
+    #[derive(Copy, Drop, Serde)]
+    #[dojo::event]
+    pub struct WithdrawalRequestCreated {
+        #[key]
+        pub owner: ContractAddress,
+        pub withdrawal_id: u256,
+        pub amount: u256,
+        pub requested_block: u64,
+    }
+
+    #[derive(Copy, Drop, Serde)]
+    #[dojo::event]
+    pub struct WithdrawalExecuted {
+        #[key]
+        pub owner: ContractAddress,
+        pub withdrawal_id: u256,
+        pub amount: u256,
+        pub executed_block: u64,
     }
 
     #[abi(embed_v0)]
@@ -202,16 +232,16 @@ pub mod buy_coins {
 
             let global: CoinShopGlobal = world.read_model(ZERO_FELT);
             let owner = global.owner;
-            assert(caller == owner, 'Not owner');
+            assert(IsOwnerTrait::is_owner(caller, owner), 'Not owner');
 
             let mut config: TokenPurchaseConfig = world.read_model(owner);
 
+            let available = config.total_strk_collected - config.total_strk_withdrawn;
             assert(amount_strk.low > 0 || amount_strk.high > 0, 'Amount must be positive');
-            let total = config.total_strk_collected;
             assert(
-                amount_strk.high < total.high
-                    || (amount_strk.high == total.high && amount_strk.low <= total.low),
-                'Exceeds collected',
+                amount_strk.high < available.high
+                    || (amount_strk.high == available.high && amount_strk.low <= available.low),
+                'Exceeds available',
             );
 
             let token = neon_sentinel::erc20::IERC20Dispatcher {
@@ -220,15 +250,12 @@ pub mod buy_coins {
             let ok = token.transfer(owner, amount_strk);
             assert(ok, 'STRK transfer failed');
 
-            config.total_strk_collected = config.total_strk_collected - amount_strk;
+            let withdrawal_id = config.next_withdrawal_id;
+            config.total_strk_withdrawn = config.total_strk_withdrawn + amount_strk;
             config.last_updated = block_number;
+            config.next_withdrawal_id = config.next_withdrawal_id + u256 { low: 1, high: 0 };
             world.write_model(@config);
 
-            let withdrawal_id = u256 {
-                low: (block_number.try_into().unwrap()) * 0x100000000
-                    + (block_number.try_into().unwrap() % 0x100000000),
-                high: 0,
-            };
             let request = WithdrawalRequest {
                 withdrawal_id,
                 owner_address: owner,
@@ -249,6 +276,127 @@ pub mod buy_coins {
             });
 
             amount_strk
+        }
+
+        fn get_treasury_balance(ref self: ContractState) -> u256 {
+            let world = self.world_default();
+            let global: CoinShopGlobal = world.read_model(ZERO_FELT);
+            let config: TokenPurchaseConfig = world.read_model(global.owner);
+            config.total_strk_collected - config.total_strk_withdrawn
+        }
+
+        fn get_treasury_info(ref self: ContractState) -> (u256, u256, u256, u256) {
+            let world = self.world_default();
+            let global: CoinShopGlobal = world.read_model(ZERO_FELT);
+            let config: TokenPurchaseConfig = world.read_model(global.owner);
+            let collected = config.total_strk_collected;
+            let withdrawn = config.total_strk_withdrawn;
+            let available = collected - withdrawn;
+            let pending = zero_u256();
+            (collected, withdrawn, available, pending)
+        }
+
+        fn request_withdrawal(ref self: ContractState, amount_strk: u256, notes: felt252) -> u256 {
+            let mut world = self.world_default();
+            let caller = get_caller_address();
+            let exec_info = get_execution_info();
+            let block_number = exec_info.block_info.block_number;
+
+            let global: CoinShopGlobal = world.read_model(ZERO_FELT);
+            let owner = global.owner;
+            assert(IsOwnerTrait::is_owner(caller, owner), 'Not owner');
+
+            let mut config: TokenPurchaseConfig = world.read_model(owner);
+            let available = config.total_strk_collected - config.total_strk_withdrawn;
+            assert(amount_strk.low > 0 || amount_strk.high > 0, 'Amount must be positive');
+            assert(
+                amount_strk.high < available.high
+                    || (amount_strk.high == available.high && amount_strk.low <= available.low),
+                'Exceeds available',
+            );
+
+            let withdrawal_id = config.next_withdrawal_id;
+            config.next_withdrawal_id = config.next_withdrawal_id + u256 { low: 1, high: 0 };
+            config.last_updated = block_number;
+            world.write_model(@config);
+
+            let request = WithdrawalRequest {
+                withdrawal_id,
+                owner_address: owner,
+                strk_amount: amount_strk,
+                requested_block: block_number,
+                status: WITHDRAWAL_STATUS_PENDING,
+                executed_block: 0,
+                executed_at_transaction: zero_u256(),
+                notes,
+            };
+            world.write_model(@request);
+
+            world.emit_event(@WithdrawalRequestCreated {
+                owner: caller,
+                withdrawal_id,
+                amount: amount_strk,
+                requested_block: block_number,
+            });
+
+            withdrawal_id
+        }
+
+        fn execute_withdrawal(ref self: ContractState, withdrawal_id: u256) -> u256 {
+            let mut world = self.world_default();
+            let caller = get_caller_address();
+            let exec_info = get_execution_info();
+            let block_number = exec_info.block_info.block_number;
+
+            let global: CoinShopGlobal = world.read_model(ZERO_FELT);
+            let owner = global.owner;
+            assert(IsOwnerTrait::is_owner(caller, owner), 'Not owner');
+
+            let mut request: WithdrawalRequest = world.read_model(withdrawal_id);
+            assert(request.status == WITHDRAWAL_STATUS_PENDING, 'Not pending');
+            assert(
+                block_number >= request.requested_block + WITHDRAWAL_DELAY_BLOCKS,
+                'Delay not passed',
+            );
+
+            let mut config: TokenPurchaseConfig = world.read_model(owner);
+            let available = config.total_strk_collected - config.total_strk_withdrawn;
+            let amount = request.strk_amount;
+            assert(
+                amount.high < available.high
+                    || (amount.high == available.high && amount.low <= available.low),
+                'Exceeds available',
+            );
+
+            let token = neon_sentinel::erc20::IERC20Dispatcher {
+                contract_address: config.strk_token_address,
+            };
+            let ok = token.transfer(owner, amount);
+            assert(ok, 'STRK transfer failed');
+
+            config.total_strk_withdrawn = config.total_strk_withdrawn + amount;
+            config.last_updated = block_number;
+            world.write_model(@config);
+
+            request.status = WITHDRAWAL_STATUS_EXECUTED;
+            request.executed_block = block_number;
+            world.write_model(@request);
+
+            world.emit_event(@WithdrawalExecuted {
+                owner: caller,
+                withdrawal_id,
+                amount,
+                executed_block: block_number,
+            });
+
+            world.emit_event(@StrkWithdrawn {
+                owner: caller,
+                amount,
+                withdrawal_id,
+                block_number,
+            });
+
+            amount
         }
     }
 

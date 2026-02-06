@@ -241,11 +241,13 @@ pub struct TokenPurchaseConfig {
     pub strk_token_address: ContractAddress,
     pub coin_exchange_rate: u32,
     pub total_strk_collected: u256,
+    pub total_strk_withdrawn: u256,
     pub total_coins_sold: u256,
     pub is_enabled: bool,
     pub paused: bool,
     pub last_updated: u64,
     pub collected_strk_version: u32,
+    pub next_withdrawal_id: u256,
 }
 
 /// Immutable record of a single coin purchase. Used for auditing and receipt verification.

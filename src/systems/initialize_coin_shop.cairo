@@ -75,17 +75,19 @@ pub mod initialize_coin_shop {
             };
             world.write_model(@coin_shop_global);
 
-            // 5. Create TokenPurchaseConfig
+            // 5. Create TokenPurchaseConfig (owner immutable; treasury tracking)
             let config = TokenPurchaseConfig {
                 owner: caller,
                 strk_token_address,
                 coin_exchange_rate: exchange_rate,
                 total_strk_collected: zero_u256(),
+                total_strk_withdrawn: zero_u256(),
                 total_coins_sold: zero_u256(),
                 is_enabled: true,
                 paused: false,
                 last_updated: block_number,
                 collected_strk_version: 0,
+                next_withdrawal_id: zero_u256(),
             };
             world.write_model(@config);
 

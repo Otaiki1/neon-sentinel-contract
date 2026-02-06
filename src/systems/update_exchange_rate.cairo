@@ -22,6 +22,7 @@ pub mod update_exchange_rate {
     use super::{MAX_EXCHANGE_RATE, MAX_RATE_CHANGE_PERCENT, MIN_EXCHANGE_RATE, ZERO_FELT};
     use super::IUpdateExchangeRate;
     use neon_sentinel::models::{CoinShopGlobal, TokenPurchaseConfig};
+    use neon_sentinel::owner_access::IsOwnerTrait;
 
     #[derive(Copy, Drop, Serde)]
     #[dojo::event]
@@ -42,7 +43,7 @@ pub mod update_exchange_rate {
             let block_number = exec_info.block_info.block_number;
 
             let global: CoinShopGlobal = world.read_model(ZERO_FELT);
-            assert(caller == global.owner, 'Not owner');
+            assert(IsOwnerTrait::is_owner(caller, global.owner), 'Not owner');
 
             let mut config: TokenPurchaseConfig = world.read_model(global.owner);
 

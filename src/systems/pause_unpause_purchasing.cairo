@@ -18,6 +18,7 @@ pub mod pause_unpause_purchasing {
     use super::IPauseUnpausePurchasing;
     use super::ZERO_FELT;
     use neon_sentinel::models::{CoinShopGlobal, TokenPurchaseConfig};
+    use neon_sentinel::owner_access::IsOwnerTrait;
 
     #[derive(Copy, Drop, Serde)]
     #[dojo::event]
@@ -37,7 +38,7 @@ pub mod pause_unpause_purchasing {
             let block_number = exec_info.block_info.block_number;
 
             let global: CoinShopGlobal = world.read_model(ZERO_FELT);
-            assert(caller == global.owner, 'Not owner');
+            assert(IsOwnerTrait::is_owner(caller, global.owner), 'Not owner');
 
             let mut config: TokenPurchaseConfig = world.read_model(global.owner);
             config.paused = if config.paused { false } else { true };
