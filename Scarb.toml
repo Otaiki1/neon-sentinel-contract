@@ -4,12 +4,15 @@ version = "1.8.0"
 edition = "2024_07"
 
 [cairo]
-sierra-replace-ids = true
+# false = deterministic class hashes for deployment (avoids "Mismatch compiled class hash" on migrate).
+sierra-replace-ids = false
 
 [scripts]
 migrate = "sozo build && sozo migrate"
 spawn = "sozo execute neon_sentinel-actions spawn --wait"
 move = "sozo execute neon_sentinel-actions move -c 1 --wait"
+
+[profile.sepolia]
 
 [dependencies]
 dojo = "1.8.0"

@@ -119,6 +119,20 @@ Spend coins (generic; init_game does its own spend for upgrades).
 - **Preconditions:** amount > 0; sufficient balance
 - **Effect:** Deducts coins; updates history; emits CoinSpent; returns true
 
+### 3.8 buy_coins (STRK → in-game coins)
+
+Purchase in-game coins with STRK. The coin shop must be initialized (owner calls `initialize_coin_shop`) and the user must approve STRK to the buy_coins contract first.
+
+- **Contract:** `neon_sentinel-buy_coins`
+- **Method:** `buy_coins(amount_strk, max_coins_expected) -> u256` (returns coins received)
+- **Parameters:**
+    - `amount_strk`: u256 — STRK amount (max 1000 per tx)
+    - `max_coins_expected`: u256 — Must equal `amount_strk * exchange_rate` (slippage check); rate is set at init (e.g. 5 coins per STRK)
+- **Preconditions:** Coin shop initialized; not paused; user has approved STRK; sufficient STRK balance; `max_coins_expected == amount_strk * rate`
+- **Effect:** Transfers STRK from caller to contract; adds coins to PlayerProfile; updates coin log hash/count; writes CoinPurchaseRecord, CoinPurchaseHistory; emits CoinsPurchased
+
+**Owner-only (same contract):** `withdraw_strk(amount_strk, notes)`, `request_withdrawal(amount_strk, notes)`, `execute_withdrawal(withdrawal_id)`, `get_treasury_balance()`, `get_treasury_info()`. Other contracts: `neon_sentinel-initialize_coin_shop` (one-time), `neon_sentinel-update_exchange_rate`, `neon_sentinel-pause_unpause_purchasing` (owner only).
+
 ---
 
 ## 4. Entities (Models) for Reading State
@@ -162,12 +176,25 @@ Use Torii GraphQL to query these. Entity names and keys follow Dojo conventions 
 
 ---
 
+### 4.8 Coin Shop Entities
+
+- **CoinShopGlobal** — Singleton (key 0). Use: purchasing_paused, total_strk_collected, total_strk_withdrawn (for treasury info).
+- **TokenPurchaseConfig** — Key: owner. Use: strk_token_address, coin_exchange_rate (for UI: "X coins per STRK").
+- **CoinPurchaseRecord** — Key: purchase_id. Use: per-purchase history (player, strk_amount, coins_minted, block).
+- **CoinPurchaseHistory** — Key: player_address. Use: purchase_count, last_purchase_block per player.
+- **WithdrawalRequest** — Key: withdrawal_id. Use: owner withdrawals (amount, status, blocks).
+
+---
+
 ## 5. Events (Dojo / Starknet)
 
 Systems emit events for indexing and UI:
 
 - **CoinClaimed** — player, amount (3), block_number (claim_coins)
 - **CoinSpent** — player, amount, reason, block_number (init_game pregame spend, spend_coins)
+- **CoinsPurchased** — player, strk_amount, coins_minted, purchase_id, block_number (buy_coins)
+- **StrkWithdrawn**, **WithdrawalRequestCreated**, **WithdrawalExecuted** — coin shop owner actions
+- **CoinShopInitialized**, **PurchasingPauseToggled**, **ExchangeRateUpdated** — shop config
 - **Moved** — player, direction (starter actions)
 - **GameEvent** — Written as a model (event_id, run_id, event_type, …); subscribe via Torii to model updates or to event_type.
 
@@ -195,35 +222,40 @@ Use Torii subscriptions or event filters to update the UI when a run advances, a
 2. Query **Player** by player address. If `is_active`, you have an active run: use `run_id`, position, lives, etc.
 3. If active, query **RunState** by (player_address, run_id) for score, layer, combo, is_finished.
 
-### 7.2 Start a run
+### 7.2 Get more coins (claim or buy)
+
+- **Claim:** If 24h passed (last_coin_claim_block + 7200 ≤ current block), call **claim_coins**().
+- **Buy with STRK:** If coin shop is initialized and not paused: approve STRK to the buy_coins contract, then call **buy_coins**(amount_strk, amount_strk * rate). Rate is from TokenPurchaseConfig (e.g. 5). Max 1000 STRK per tx.
+
+### 7.3 Start a run
 
 1. Ensure no active run (Player.is_active == false).
-2. Optionally call **claim_coins** if 24h passed (check last_coin_claim_block + 7200 ≤ current block).
+2. Optionally **claim_coins** or **buy_coins** if the player needs more coins.
 3. Compute upgrade cost (e.g. popcount of upgrade mask × 1); ensure profile.coins >= cost.
 4. Call **init_game**(kernel, pregame_upgrades_mask, expected_cost).
 5. Refresh Player and RunState; show run UI.
 
-### 7.3 Game loop (each tick)
+### 7.4 Game loop (each tick)
 
 1. Get current block (from RPC or Torii).
 2. Build `player_input` (direction + action), `enemy_ids` (enemies to process).
 3. Call **execute_tick**(run_id, player_input, 0, 0, enemy_ids) (sig 0,0 for placeholder).
 4. Wait for tx; then refresh Player, RunState, Enemies (and optional GameTick/GameEvent).
 
-### 7.4 Register a hit
+### 7.5 Register a hit
 
 When your client detects a hit (within range):
 
 1. Call **hit_registration**(run_id, enemy_id, damage, player_x, player_y, 0) with current Player (x, y).
 2. Refresh RunState and Enemy; optionally subscribe to GameEvent for hit/powerup/layer.
 
-### 7.5 End run and submit to leaderboard
+### 7.6 End run and submit to leaderboard
 
 1. Call **end_run**(run_id). Refresh Player (is_active false) and RunState (is_finished, final_score).
 2. Compute current week: `week = floor(block_number / 50400)`.
 3. Call **submit_leaderboard**(run_id, week). Refresh RunState (submitted_to_leaderboard) and LeaderboardEntry list.
 
-### 7.6 Leaderboard view
+### 7.7 Leaderboard view
 
 1. Query **LeaderboardEntry** filtered by week (and optionally order by final_score).
 2. Display entry_id, player_address, final_score, deepest_layer, survival_blocks, verified, etc.
@@ -244,6 +276,8 @@ When your client detects a hit (within range):
 - **Already submitted** — submit_leaderboard called twice for same run.
 - **Week mismatch** — submit_leaderboard week ≠ current_leaderboard_week(block).
 - **Too soon to claim** — claim_coins before 7200 blocks since last claim.
+- **Purchasing paused** — buy_coins when shop is paused.
+- **Approve STRK first** / **Insufficient STRK balance** / **Expected coins mismatch** — buy_coins validation failures.
 
 Map these to user-facing messages and disable/validate UI (e.g. “Wait X blocks to claim”, “Finish current run first”).
 
@@ -268,7 +302,7 @@ Map these to user-facing messages and disable/validate UI (e.g. “Wait X blocks
 
 - [ ] Resolve world and system addresses (from migrate or config).
 - [ ] Use Torii GraphQL (or RPC) to load Player, RunState, PlayerProfile, Enemies, LeaderboardEntry.
-- [ ] Implement init_game, execute_tick, hit_registration, end_run, submit_leaderboard, claim_coins (and spend_coins if needed).
+- [ ] Implement init_game, execute_tick, hit_registration, end_run, submit_leaderboard, claim_coins, buy_coins (and spend_coins if needed).
 - [ ] Use block number for cooldowns and week; do not rely on client time for game rules.
 - [ ] Handle revert reasons and show clear errors.
 - [ ] Subscribe to events or poll state after transactions for a responsive UI.

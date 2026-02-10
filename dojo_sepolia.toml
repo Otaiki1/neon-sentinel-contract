@@ -1,0 +1,35 @@
+# Neon Sentinel — Sepolia testnet deployment config.
+# Use with: sozo -P sepolia build / sozo -P sepolia migrate
+# Env vars (e.g. from .env.sepolia): STARKNET_RPC_URL, DOJO_ACCOUNT_ADDRESS, DOJO_PRIVATE_KEY
+
+[world]
+name = "Neon Sentinel"
+description = "Neon Sentinel — a Dojo Autonomous World."
+cover_uri = "file://assets/cover.png"
+icon_uri = "file://assets/icon.png"
+website = "https://github.com/dojoengine/neon-sentinel-dojo"
+# Use a unique seed so you deploy a fresh world (avoids "Mismatch compiled class hash" when upgrading an older deployment).
+seed = "neon_sentinel_sepolia"
+
+[world.socials]
+x = "https://x.com/ohayo_dojo"
+discord = "https://discord.gg/FB2wR6uF"
+github = "https://github.com/dojoengine/neon-sentinel-dojo"
+telegram = "https://t.me/dojoengine"
+
+[namespace]
+default = "neon_sentinel"
+
+[env]
+# Supply via environment when running sozo (e.g. source .env.sepolia):
+#   STARKNET_RPC_URL, DOJO_ACCOUNT_ADDRESS, DOJO_PRIVATE_KEY
+# Leave empty here; the deploy script exports them from .env.sepolia.
+# If your Sozo version requires values in file, set them here and do not commit.
+rpc_url = ""         # or env: STARKNET_RPC_URL
+account_address = "" # or env: DOJO_ACCOUNT_ADDRESS
+private_key = ""     # or env: DOJO_PRIVATE_KEY
+# World deployed at block 6329028; set so next migrate continues with Sync resources (declare classes).
+world_address = "0x06251bf8880dd768bec8974555df2d4aede3b81852fbef43f1323b240ff740a1"
+
+[writers]
+"neon_sentinel" = ["neon_sentinel-actions", "neon_sentinel-buy_coins", "neon_sentinel-claim_coins", "neon_sentinel-end_run", "neon_sentinel-execute_tick", "neon_sentinel-hit_registration", "neon_sentinel-init_game", "neon_sentinel-initialize_coin_shop", "neon_sentinel-pause_unpause_purchasing", "neon_sentinel-spend_coins", "neon_sentinel-submit_leaderboard", "neon_sentinel-update_exchange_rate"]

@@ -32,13 +32,18 @@ flowchart LR
     SL[submit_leaderboard]
     CC[claim_coins]
     SC[spend_coins]
+    BC[buy_coins]
+    ICS[initialize_coin_shop]
+    UER[update_exchange_rate]
+    PUP[pause_unpause_purchasing]
+    ACT[actions]
   end
   systems -->|read/write| NS
   NS --> models
 ```
 
 - **Namespace:** `neon_sentinel`. All game models and permitted writers are scoped to this namespace.
-- **Writers:** Only the following system contracts may write to `neon_sentinel`: `init_game`, `execute_tick`, `hit_registration`, `end_run`, `submit_leaderboard`, `claim_coins`, `spend_coins`, and the starter `actions`. Enforced by Dojo at the world level.
+- **Writers:** Only the following system contracts may write to `neon_sentinel`: `actions`, `init_game`, `execute_tick`, `hit_registration`, `end_run`, `submit_leaderboard`, `claim_coins`, `spend_coins`, `buy_coins`, `initialize_coin_shop`, `update_exchange_rate`, `pause_unpause_purchasing`. Enforced by Dojo at the world level.
 - **Storage:** Models are stored under their composite key (e.g. `(player_address)` for Player, `(player_address, run_id)` for RunState). No system can write a model it does not have permission for; clients cannot write directly.
 
 ### 1.2 Execution and Timing
@@ -235,14 +240,22 @@ Every model is a `#[dojo::model]` struct. Keys are marked with `#[key]` and uniq
 | current_prestige, current_layer, highest_prestige_reached         | u8              | Progress.                                                              |
 | is_prime_sentinel                                                 | bool            | Flag.                                                                  |
 | total_runs, lifetime_score, lifetime_playtime_blocks, ...         | u32/u64         | Aggregates.                                                            |
-| coins                                                             | u32             | Balance; increased by claim_coins, decreased by init_game/spend_coins. |
+| coins                                                             | u32             | Balance; increased by claim_coins and buy_coins, decreased by init_game/spend_coins. |
 | last_coin_claim_block                                             | u64             | Last claim block; claim_coins requires block - this >= 7200.           |
 | coin_transaction_log_hash                                         | u256            | Append-only hash chain of coin ops.                                    |
 | coin_transaction_count                                            | u32             | Number of coin transactions.                                           |
 | selected_kernel, kernel_unlocks, avatar_unlocks, cosmetic_unlocks | u8/u64          | Unlocks.                                                               |
 | last_profile_update_block, profile_hash                           | u64, u256       | Metadata.                                                              |
 
-**Writers:** init_game (coins, log hash, count), claim_coins (coins, last_coin_claim_block, log hash, count), spend_coins (coins, log hash, count). Profile is created/updated by systems or by world setup; clients cannot write.
+**Writers:** init_game (coins, log hash, count), claim_coins (coins, last_coin_claim_block, log hash, count), spend_coins (coins, log hash, count), buy_coins (coins, log hash, count). Profile is created/updated by systems or by world setup; clients cannot write.
+
+### 3.8 Coin Shop Models
+
+- **CoinShopGlobal** — Singleton (key = 0): owner, purchasing_paused, total_strk_collected, total_strk_withdrawn, etc. Writers: initialize_coin_shop (create), buy_coins (totals), update_exchange_rate, pause_unpause_purchasing, buy_coins (withdrawals).
+- **TokenPurchaseConfig** — Key: owner (ContractAddress). Holds strk_token_address, coin_exchange_rate. Writers: initialize_coin_shop (one-time), update_exchange_rate (rate only).
+- **CoinPurchaseRecord** — Per-purchase record (purchase_id, player, strk_amount, coins_minted, block, etc.). Writer: buy_coins.
+- **CoinPurchaseHistory** — Per-player aggregate (player_address, purchase_count, last_purchase_block, etc.). Writer: buy_coins.
+- **WithdrawalRequest** — Per-withdrawal (withdrawal_id, amount, status: pending/executed, blocks). Writers: buy_coins (request_withdrawal, execute_withdrawal, withdraw_strk).
 
 ---
 
@@ -294,6 +307,24 @@ Every model is a `#[dojo::model]` struct. Keys are marked with `#[key]` and uniq
 ### 4.7 spend_coins
 
 - **Purpose:** Deduct coins for any reason (amount > 0, balance sufficient). Updates log hash and count, emits CoinSpent, returns true. init_game implements its own deduction and the same log/count/event pattern for pregame upgrades.
+
+### 4.8 initialize_coin_shop
+
+- **Purpose:** One-time setup of the STRK → coins shop. Caller becomes owner. Sets CoinShopGlobal (owner, paused false), TokenPurchaseConfig (strk_token_address, exchange_rate). Exchange rate must be in [3, 10]. Re-initialization blocked by existing config check.
+- **Writers:** Creates/updates CoinShopGlobal, TokenPurchaseConfig. Emits CoinShopInitialized.
+
+### 4.9 buy_coins
+
+- **Purpose:** User purchases in-game coins with STRK. User must approve STRK to the buy_coins contract; then calls buy_coins(amount_strk, max_coins_expected). Coins = amount_strk * exchange_rate (u32); max_coins_expected must match (slippage protection). STRK is transferFrom(caller → contract); profile coins and log hash/count updated. Max 1000 STRK per tx. Writes CoinPurchaseRecord, CoinPurchaseHistory. Owner can withdraw_strk, request_withdrawal + execute_withdrawal (with delay), and pause/unpause via pause_unpause_purchasing.
+- **Writers:** CoinShopGlobal (totals, paused), PlayerProfile (coins, log, count), CoinPurchaseRecord, CoinPurchaseHistory, WithdrawalRequest. Emits CoinsPurchased, StrkWithdrawn, WithdrawalRequestCreated, WithdrawalExecuted, etc.
+
+### 4.10 update_exchange_rate
+
+- **Purpose:** Owner-only. Updates TokenPurchaseConfig.coin_exchange_rate. New rate must be within [3, 10] and within ±20% of previous rate. Emits ExchangeRateUpdated.
+
+### 4.11 pause_unpause_purchasing
+
+- **Purpose:** Owner-only. Toggles CoinShopGlobal.purchasing_paused. When paused, buy_coins reverts. Emits PurchasingPauseToggled.
 
 ---
 
@@ -358,7 +389,7 @@ Every model is a `#[dojo::model]` struct. Keys are marked with `#[key]` and uniq
 - **Run lifecycle:** init_game → (execute_tick | hit_registration)\* → end_run → [submit_leaderboard]. No backward transitions.
 - **Score and combo:** Only increase via defined kill paths; no direct setter.
 - **Position:** Player position only in execute_tick; enemy position only in execute_tick and hit_registration (no client-set positions).
-- **Coins:** Balance changes only via claim_coins (add), init_game (subtract for upgrades), spend_coins (subtract); all coin moves update log hash and count.
+- **Coins:** Balance changes only via claim_coins (add), buy_coins (add), init_game (subtract for upgrades), spend_coins (subtract); all coin moves update log hash and count.
 
 ---
 
@@ -398,18 +429,26 @@ scarb test
 
 ```
 src/
-├── lib.cairo              # systems, models, tests
+├── lib.cairo              # systems, models, tests, support modules
 ├── models.cairo           # All Dojo models; Vec2, Direction; unit tests
+├── erc20.cairo            # ERC20 interface (STRK token)
+├── owner_access.cairo     # IsOwnerTrait (coin shop)
+├── token_validation.cairo # STRK amount/allowance/balance/transfer validation
 └── systems/
-    ├── actions.cairo      # Starter spawn/move
+    ├── actions.cairo           # Starter spawn/move
     ├── init_game.cairo
     ├── execute_tick.cairo
     ├── hit_registration.cairo
     ├── end_run.cairo
     ├── submit_leaderboard.cairo
     ├── claim_coins.cairo
-    └── spend_coins.cairo
-tests/
+    ├── spend_coins.cairo
+    ├── buy_coins.cairo            # STRK → in-game coins; treasury; withdrawals
+    ├── initialize_coin_shop.cairo  # One-time shop setup (owner)
+    ├── update_exchange_rate.cairo # Owner: change rate (capped)
+    └── pause_unpause_purchasing.cairo  # Owner: pause/unpause buying
+src/tests/
+├── test_coin_shop.cairo
 ├── test_systems_integration.cairo
 └── test_world.cairo
 ```

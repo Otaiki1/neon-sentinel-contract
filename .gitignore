@@ -1,2 +1,8 @@
 target
 dojo_mainnet.toml
+
+# Env files with secrets (use .env.sepolia.example as template)
+.env
+.env.sepolia
+.env.priv
+.env.*.local
