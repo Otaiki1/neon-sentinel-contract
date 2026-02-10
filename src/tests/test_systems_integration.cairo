@@ -145,12 +145,16 @@ mod tests {
 
         let (end_addr, _) = world.dns(@"end_run").unwrap();
         let end_sys = IEndRunDispatcher { contract_address: end_addr };
-        end_sys.end_run(run_id);
+        let final_score: u64 = 500;
+        let total_kills: u32 = 0;
+        let final_layer: u8 = 1;
+        end_sys.end_run(run_id, final_score, total_kills, final_layer);
 
         let run_state: RunState = world.read_model((caller, run_id));
         assert(run_state.is_finished == true, 'is_finished true');
-        assert(run_state.final_score == run_state.score, 'final_score locked');
-        assert(run_state.final_layer == run_state.current_layer, 'final_layer locked');
+        assert(run_state.final_score == final_score, 'final_score from client');
+        assert(run_state.enemies_defeated == total_kills, 'total_kills from client');
+        assert(run_state.final_layer == final_layer, 'final_layer from client');
 
         let player_after: Player = world.read_model(caller);
         assert(player_after.is_active == false, 'player inactive');
@@ -171,7 +175,7 @@ mod tests {
 
         let (end_addr, _) = world.dns(@"end_run").unwrap();
         let end_sys = IEndRunDispatcher { contract_address: end_addr };
-        end_sys.end_run(run_id);
+        end_sys.end_run(run_id, 1000, 5, 2);
 
         let week: u32 = 0;
         let (sub_addr, _) = world.dns(@"submit_leaderboard").unwrap();
@@ -261,7 +265,7 @@ mod tests {
         let run_id = player.run_id;
         let (end_addr, _) = world.dns(@"end_run").unwrap();
         let end_sys = IEndRunDispatcher { contract_address: end_addr };
-        end_sys.end_run(run_id);
+        end_sys.end_run(run_id, 800, 3, 1);
         let week: u32 = 0;
         let (sub_addr, _) = world.dns(@"submit_leaderboard").unwrap();
         let sub_sys = ISubmitLeaderboardDispatcher { contract_address: sub_addr };
