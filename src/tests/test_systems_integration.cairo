@@ -4,7 +4,6 @@
 #[cfg(test)]
 mod tests {
     use core::integer::u256;
-    use core::array::ArrayTrait;
     use dojo::model::{ModelStorage, ModelStorageTest};
     use dojo::world::{WorldStorageTrait, world};
     use dojo_cairo_test::{
@@ -17,9 +16,6 @@ mod tests {
         m_RunState,
     };
     use neon_sentinel::systems::end_run::{IEndRunDispatcher, IEndRunDispatcherTrait, end_run};
-    use neon_sentinel::systems::execute_tick::{
-        IExecuteTickDispatcher, IExecuteTickDispatcherTrait, execute_tick,
-    };
     use neon_sentinel::systems::hit_registration::{
         IHitRegistrationDispatcher, IHitRegistrationDispatcherTrait, hit_registration,
     };
@@ -50,7 +46,6 @@ mod tests {
                 TestResource::Model(m_PlayerProfile::TEST_CLASS_HASH),
                 TestResource::Event(init_game::e_CoinSpent::TEST_CLASS_HASH),
                 TestResource::Contract(init_game::TEST_CLASS_HASH),
-                TestResource::Contract(execute_tick::TEST_CLASS_HASH),
                 TestResource::Contract(hit_registration::TEST_CLASS_HASH),
                 TestResource::Contract(end_run::TEST_CLASS_HASH),
                 TestResource::Contract(submit_leaderboard::TEST_CLASS_HASH),
@@ -66,8 +61,6 @@ mod tests {
         let ns_hash = dojo::utils::bytearray_hash(@"neon_sentinel");
         [
             ContractDefTrait::new(@"neon_sentinel", @"init_game")
-                .with_writer_of([ns_hash].span()),
-            ContractDefTrait::new(@"neon_sentinel", @"execute_tick")
                 .with_writer_of([ns_hash].span()),
             ContractDefTrait::new(@"neon_sentinel", @"hit_registration")
                 .with_writer_of([ns_hash].span()),
@@ -141,33 +134,6 @@ mod tests {
 
         let profile: PlayerProfile = world.read_model(caller);
         assert(profile.coins == 100, 'coins unchanged when cost 0');
-    }
-
-    #[test]
-    #[available_gas(100000000)]
-    fn test_execute_tick_updates_position_and_tick_counter() {
-        set_block_number(1000);
-        let (mut world, caller) = setup_world_with_profile();
-
-        let (addr, _) = world.dns(@"init_game").unwrap();
-        let init = IInitGameDispatcher { contract_address: addr };
-        init.init_game(0, zero_u256(), 0);
-
-        let player: Player = world.read_model(caller);
-        let run_id = player.run_id;
-
-        set_block_number(1001);
-        let (tick_addr, _) = world.dns(@"execute_tick").unwrap();
-        let tick_sys = IExecuteTickDispatcher { contract_address: tick_addr };
-        let enemy_ids: Array<u256> = ArrayTrait::new();
-        tick_sys.execute_tick(run_id, 2, zero_u256(), zero_u256(), enemy_ids);
-
-        let player_after: Player = world.read_model(caller);
-        assert(player_after.x == 1 && player_after.y == 0, 'position moved right');
-        assert(player_after.tick_counter == 1, 'tick_counter 1');
-
-        let run_state: RunState = world.read_model((caller, run_id));
-        assert(run_state.total_ticks_processed == 1, 'total_ticks 1');
     }
 
     #[test]
@@ -338,70 +304,8 @@ mod tests {
         hit_sys.hit_registration(run_id, enemy_id, 10, 0, 0, zero_u256());
     }
 
-    #[test]
-    #[ignore]
-    #[available_gas(80000000)]
-    #[should_panic(expected: ('Block must increase',))]
-    fn test_cannot_replay_same_tick_twice() {
-        set_block_number(8000);
-        let (mut world, caller) = setup_world_with_profile();
-        let (addr, _) = world.dns(@"init_game").unwrap();
-        let init = IInitGameDispatcher { contract_address: addr };
-        init.init_game(0, zero_u256(), 0);
-        let player: Player = world.read_model(caller);
-        let run_id = player.run_id;
-        let (tick_addr, _) = world.dns(@"execute_tick").unwrap();
-        let tick_sys = IExecuteTickDispatcher { contract_address: tick_addr };
-        let enemy_ids: Array<u256> = ArrayTrait::new();
-        tick_sys.execute_tick(run_id, 0, zero_u256(), zero_u256(), enemy_ids);
-        let enemy_ids2: Array<u256> = ArrayTrait::new();
-        tick_sys.execute_tick(run_id, 0, zero_u256(), zero_u256(), enemy_ids2);
-    }
-
-    #[test]
-    #[ignore]
-    #[available_gas(80000000)]
-    #[should_panic(expected: ('Run not active',))]
-    fn test_cannot_modify_score_after_finish() {
-        set_block_number(9000);
-        let (mut world, caller) = setup_world_with_profile();
-        let (addr, _) = world.dns(@"init_game").unwrap();
-        let init = IInitGameDispatcher { contract_address: addr };
-        init.init_game(0, zero_u256(), 0);
-        let player: Player = world.read_model(caller);
-        let run_id = player.run_id;
-        let (end_addr, _) = world.dns(@"end_run").unwrap();
-        let end_sys = IEndRunDispatcher { contract_address: end_addr };
-        end_sys.end_run(run_id);
-        set_block_number(9001);
-        let (tick_addr, _) = world.dns(@"execute_tick").unwrap();
-        let tick_sys = IExecuteTickDispatcher { contract_address: tick_addr };
-        let enemy_ids: Array<u256> = ArrayTrait::new();
-        tick_sys.execute_tick(run_id, 0, zero_u256(), zero_u256(), enemy_ids);
-    }
-
     // ---------- Security tests (attack prevention) ----------
     // Tests that expect specific failure use #[should_panic] + #[ignore] for scarb test; run with snforge to verify.
-
-    #[test]
-    #[ignore]
-    #[available_gas(80000000)]
-    #[should_panic(expected: ('Block must increase',))]
-    fn test_security_replay_attack_execute_tick_twice() {
-        set_block_number(10000);
-        let (mut world, caller) = setup_world_with_profile();
-        let (addr, _) = world.dns(@"init_game").unwrap();
-        let init = IInitGameDispatcher { contract_address: addr };
-        init.init_game(0, zero_u256(), 0);
-        let player: Player = world.read_model(caller);
-        let run_id = player.run_id;
-        let (tick_addr, _) = world.dns(@"execute_tick").unwrap();
-        let tick_sys = IExecuteTickDispatcher { contract_address: tick_addr };
-        let ids: Array<u256> = ArrayTrait::new();
-        tick_sys.execute_tick(run_id, 0, zero_u256(), zero_u256(), ids);
-        let ids2: Array<u256> = ArrayTrait::new();
-        tick_sys.execute_tick(run_id, 0, zero_u256(), zero_u256(), ids2);
-    }
 
     #[test]
     #[ignore]
@@ -427,11 +331,6 @@ mod tests {
         init.init_game(0, zero_u256(), 0);
         let player: Player = world.read_model(caller);
         let run_id = player.run_id;
-        set_block_number(30001);
-        let (tick_addr, _) = world.dns(@"execute_tick").unwrap();
-        let tick_sys = IExecuteTickDispatcher { contract_address: tick_addr };
-        let ids: Array<u256> = ArrayTrait::new();
-        tick_sys.execute_tick(run_id, 0, zero_u256(), zero_u256(), ids);
         let run_state: RunState = world.read_model((caller, run_id));
         assert(run_state.score == 0, 'score no injection');
     }
@@ -520,42 +419,4 @@ mod tests {
         assert(player.lives == 3 && player.max_lives == 20, 'init lives');
     }
 
-    #[test]
-    #[available_gas(80000000)]
-    fn test_security_damage_immunity_collision_applies_damage_when_not_invincible() {
-        set_block_number(80000);
-        let (mut world, caller) = setup_world_with_profile();
-        let (addr, _) = world.dns(@"init_game").unwrap();
-        let init = IInitGameDispatcher { contract_address: addr };
-        init.init_game(0, zero_u256(), 0);
-        let player: Player = world.read_model(caller);
-        let run_id = player.run_id;
-        let enemy_id = u256 { low: 20, high: 0 };
-        let enemy = Enemy {
-            enemy_id,
-            run_id,
-            player_address: caller,
-            enemy_type: 1,
-            health: 10,
-            max_health: 10,
-            speed: 0,
-            points_value: 100,
-            x: 0,
-            y: 0,
-            spawn_block: 80000,
-            last_position_update_block: 80000,
-            is_active: true,
-            destroyed_at_block: 0,
-            destruction_verified: false,
-        };
-        world.write_model_test(@enemy);
-        set_block_number(80001);
-        let (tick_addr, _) = world.dns(@"execute_tick").unwrap();
-        let tick_sys = IExecuteTickDispatcher { contract_address: tick_addr };
-        let mut ids: Array<u256> = ArrayTrait::new();
-        ids.append(enemy_id);
-        tick_sys.execute_tick(run_id, 0, zero_u256(), zero_u256(), ids);
-        let player_after: Player = world.read_model(caller);
-        assert(player_after.lives < player.lives, 'collision damage');
-    }
 }

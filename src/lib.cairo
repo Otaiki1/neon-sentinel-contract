@@ -3,7 +3,6 @@ pub mod systems {
     pub mod buy_coins;
     pub mod claim_coins;
     pub mod end_run;
-    pub mod execute_tick;
     pub mod hit_registration;
     pub mod init_game;
     pub mod initialize_coin_shop;
