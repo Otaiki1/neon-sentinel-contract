@@ -11,14 +11,11 @@ mod tests {
         spawn_test_world,
     };
     use neon_sentinel::models::{
-        Enemy, LeaderboardEntry, Player, PlayerProfile, RunState,
+        LeaderboardEntry, Player, PlayerProfile, RunState,
         m_Enemy, m_GameEvent, m_GameTick, m_LeaderboardEntry, m_Player, m_PlayerProfile,
         m_RunState,
     };
     use neon_sentinel::systems::end_run::{IEndRunDispatcher, IEndRunDispatcherTrait, end_run};
-    use neon_sentinel::systems::hit_registration::{
-        IHitRegistrationDispatcher, IHitRegistrationDispatcherTrait, hit_registration,
-    };
     use neon_sentinel::systems::init_game::{
         IInitGameDispatcher, IInitGameDispatcherTrait, init_game,
     };
@@ -46,7 +43,6 @@ mod tests {
                 TestResource::Model(m_PlayerProfile::TEST_CLASS_HASH),
                 TestResource::Event(init_game::e_CoinSpent::TEST_CLASS_HASH),
                 TestResource::Contract(init_game::TEST_CLASS_HASH),
-                TestResource::Contract(hit_registration::TEST_CLASS_HASH),
                 TestResource::Contract(end_run::TEST_CLASS_HASH),
                 TestResource::Contract(submit_leaderboard::TEST_CLASS_HASH),
                 TestResource::Event(claim_coins::e_CoinClaimed::TEST_CLASS_HASH),
@@ -61,8 +57,6 @@ mod tests {
         let ns_hash = dojo::utils::bytearray_hash(@"neon_sentinel");
         [
             ContractDefTrait::new(@"neon_sentinel", @"init_game")
-                .with_writer_of([ns_hash].span()),
-            ContractDefTrait::new(@"neon_sentinel", @"hit_registration")
                 .with_writer_of([ns_hash].span()),
             ContractDefTrait::new(@"neon_sentinel", @"end_run")
                 .with_writer_of([ns_hash].span()),
@@ -134,52 +128,6 @@ mod tests {
 
         let profile: PlayerProfile = world.read_model(caller);
         assert(profile.coins == 100, 'coins unchanged when cost 0');
-    }
-
-    #[test]
-    #[available_gas(100000000)]
-    fn test_hit_registration_reduces_health_increases_score() {
-        set_block_number(2000);
-        let (mut world, caller) = setup_world_with_profile();
-
-        let (addr, _) = world.dns(@"init_game").unwrap();
-        let init = IInitGameDispatcher { contract_address: addr };
-        init.init_game(0, zero_u256(), 0);
-
-        let player: Player = world.read_model(caller);
-        let run_id = player.run_id;
-
-        let enemy_id = u256 { low: 1, high: 0 };
-        let enemy = Enemy {
-            enemy_id,
-            run_id,
-            player_address: caller,
-            enemy_type: 1,
-            health: 10,
-            max_health: 10,
-            speed: 0,
-            points_value: 100,
-            x: 5,
-            y: 0,
-            spawn_block: 2000,
-            last_position_update_block: 2000,
-            is_active: true,
-            destroyed_at_block: 0,
-            destruction_verified: false,
-        };
-        world.write_model_test(@enemy);
-
-        let (hit_addr, _) = world.dns(@"hit_registration").unwrap();
-        let hit_sys = IHitRegistrationDispatcher { contract_address: hit_addr };
-        hit_sys.hit_registration(run_id, enemy_id, 10, 0, 0, zero_u256());
-
-        let enemy_after: Enemy = world.read_model(enemy_id);
-        assert(enemy_after.health == 0, 'enemy health 0');
-        assert(enemy_after.is_active == false, 'enemy inactive');
-
-        let run_state: RunState = world.read_model((caller, run_id));
-        assert(run_state.score > 0, 'score increased');
-        assert(run_state.enemies_defeated == 1, 'enemies_defeated 1');
     }
 
     #[test]
@@ -268,42 +216,6 @@ mod tests {
         init.init_game(0, u256 { low: 1, high: 0 }, 1);
     }
 
-    #[test]
-    #[ignore]
-    #[available_gas(50000000)]
-    #[should_panic(expected: ('Out of range',))]
-    fn test_cannot_register_hit_out_of_range() {
-        set_block_number(7000);
-        let (mut world, caller) = setup_world_with_profile();
-        let (addr, _) = world.dns(@"init_game").unwrap();
-        let init = IInitGameDispatcher { contract_address: addr };
-        init.init_game(0, zero_u256(), 0);
-        let player: Player = world.read_model(caller);
-        let run_id = player.run_id;
-        let enemy_id = u256 { low: 2, high: 0 };
-        let enemy = Enemy {
-            enemy_id,
-            run_id,
-            player_address: caller,
-            enemy_type: 1,
-            health: 10,
-            max_health: 10,
-            speed: 0,
-            points_value: 100,
-            x: 100,
-            y: 100,
-            spawn_block: 7000,
-            last_position_update_block: 7000,
-            is_active: true,
-            destroyed_at_block: 0,
-            destruction_verified: false,
-        };
-        world.write_model_test(@enemy);
-        let (hit_addr, _) = world.dns(@"hit_registration").unwrap();
-        let hit_sys = IHitRegistrationDispatcher { contract_address: hit_addr };
-        hit_sys.hit_registration(run_id, enemy_id, 10, 0, 0, zero_u256());
-    }
-
     // ---------- Security tests (attack prevention) ----------
     // Tests that expect specific failure use #[should_panic] + #[ignore] for scarb test; run with snforge to verify.
 
@@ -333,42 +245,6 @@ mod tests {
         let run_id = player.run_id;
         let run_state: RunState = world.read_model((caller, run_id));
         assert(run_state.score == 0, 'score no injection');
-    }
-
-    #[test]
-    #[ignore]
-    #[available_gas(50000000)]
-    #[should_panic(expected: ('Out of range',))]
-    fn test_security_position_spoofing_hit_enemy_500_away() {
-        set_block_number(40000);
-        let (mut world, caller) = setup_world_with_profile();
-        let (addr, _) = world.dns(@"init_game").unwrap();
-        let init = IInitGameDispatcher { contract_address: addr };
-        init.init_game(0, zero_u256(), 0);
-        let player: Player = world.read_model(caller);
-        let run_id = player.run_id;
-        let enemy_id = u256 { low: 10, high: 0 };
-        let enemy = Enemy {
-            enemy_id,
-            run_id,
-            player_address: caller,
-            enemy_type: 1,
-            health: 10,
-            max_health: 10,
-            speed: 0,
-            points_value: 100,
-            x: 500,
-            y: 0,
-            spawn_block: 40000,
-            last_position_update_block: 40000,
-            is_active: true,
-            destroyed_at_block: 0,
-            destruction_verified: false,
-        };
-        world.write_model_test(@enemy);
-        let (hit_addr, _) = world.dns(@"hit_registration").unwrap();
-        let hit_sys = IHitRegistrationDispatcher { contract_address: hit_addr };
-        hit_sys.hit_registration(run_id, enemy_id, 10, 0, 0, zero_u256());
     }
 
     #[test]

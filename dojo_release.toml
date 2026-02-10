@@ -23,4 +23,4 @@ private_key = "0xc5b2fcab997346f3ea1c00b002ecf6f382c5f9c9659a3894eb783c5320f912"
 #world_address = "0x06171ed98331e849d6084bf2b3e3186a7ddf35574dd68cab4691053ee8ab69d7" # Uncomment and update this line with your world address.
 
 [writers]
-"neon_sentinel" = ["neon_sentinel-actions", "neon_sentinel-buy_coins", "neon_sentinel-claim_coins", "neon_sentinel-end_run", "neon_sentinel-hit_registration", "neon_sentinel-init_game", "neon_sentinel-initialize_coin_shop", "neon_sentinel-pause_unpause_purchasing", "neon_sentinel-spend_coins", "neon_sentinel-submit_leaderboard", "neon_sentinel-update_exchange_rate"]
+"neon_sentinel" = ["neon_sentinel-actions", "neon_sentinel-buy_coins", "neon_sentinel-claim_coins", "neon_sentinel-end_run", "neon_sentinel-init_game", "neon_sentinel-initialize_coin_shop", "neon_sentinel-pause_unpause_purchasing", "neon_sentinel-spend_coins", "neon_sentinel-submit_leaderboard", "neon_sentinel-update_exchange_rate"]
