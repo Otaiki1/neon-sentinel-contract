@@ -15,9 +15,9 @@
 ## What Is Neon Sentinel?
 
 - **Autonomous World** — Game state, runs, and leaderboards live on-chain in a Dojo world. No off-chain game server; the chain is the authority.
-- **Run-based gameplay** — Players start a run (`init_game`), play ticks (`execute_tick`), register hits (`hit_registration`), then end the run (`end_run`) and optionally submit to the weekly leaderboard (`submit_leaderboard`).
+- **Run-based gameplay (BALANCED)** — Players start a run (`init_game`), simulate gameplay client-side (ticks, hits, score), then end the run by submitting final state (`end_run(run_id, final_score, total_kills, final_layer)`) and optionally submit to the weekly leaderboard (`submit_leaderboard`).
 - **Coins and upgrades** — Players earn coins via daily claims (`claim_coins`) or by purchasing with STRK (`buy_coins`), and spend them on pregame upgrades when starting a run (`init_game` with upgrades). Coins are deducted and recorded in an append-only history.
-- **Security by design** — Block-based timing (no client time), position verification for hits (no spoofing), replay protection (no double-execution of the same tick), and immutable run state after `end_run`.
+- **Security by design** — Block-based timing (no client time), immutable run state after `end_run`; leaderboard and coins remain chain-verified. (BALANCED: client-submitted score/kills/layer trusted; optional replay verification later.)
 
 ---
 
@@ -33,8 +33,6 @@ flowchart TB
 
   subgraph game [Game Systems]
     IG[init_game]
-    ET[execute_tick]
-    HR[hit_registration]
     ER[end_run]
     SL[submit_leaderboard]
     ACT[actions]
@@ -90,9 +88,7 @@ neon-sentinel-dojo/
 │   ├── systems/               # World systems (contracts)
 │   │   ├── actions.cairo      # Starter (move/spawn)
 │   │   ├── init_game.cairo
-│   │   ├── execute_tick.cairo
-│   │   ├── hit_registration.cairo
-│   │   ├── end_run.cairo
+│   │   ├── end_run.cairo       # BALANCED: client-submitted final state
 │   │   ├── submit_leaderboard.cairo
 │   │   ├── claim_coins.cairo
 │   │   ├── spend_coins.cairo
@@ -172,8 +168,8 @@ docker compose up
 
 1. **Profile / coins** — Ensure the player has a `PlayerProfile` (e.g. seeded). They can `claim_coins` once per 24h (≈7200 blocks) or `buy_coins(amount_strk, max_coins_expected)` to purchase coins with STRK (after the shop is initialized and STRK approved).
 2. **Start run** — `init_game(kernel, pregame_upgrades_mask, expected_cost)`. Creates `Player` and `RunState`, deducts coins if `expected_cost > 0`.
-3. **Play** — Each tick: `execute_tick(run_id, player_input, sig_r, sig_s, enemy_ids)`. Updates position, processes collisions, writes `GameTick`. Hits: `hit_registration(run_id, enemy_id, damage, player_x, player_y, hit_proof)` when a shot hits an enemy (validated in range).
-4. **End run** — `end_run(run_id)`. Sets `is_finished`, locks `final_score` and `final_layer`, marks player inactive.
+3. **Play (client-side)** — Simulate ticks, movement, hits, and score locally. No on-chain tick or hit systems in BALANCED.
+4. **End run** — `end_run(run_id, final_score, total_kills, final_layer)`. Submits client-computed final state; sets `is_finished`, updates Profile and (if score ≥ 1000) awards bonus coins; marks player inactive.
 5. **Leaderboard** — `submit_leaderboard(run_id, week)`. Week = `block_number / 50400`. Creates immutable `LeaderboardEntry` with proof fields.
 
 ---

@@ -1,5 +1,5 @@
-//! System integration tests: game init, tick, hit, end_run, submit_leaderboard,
-//! error cases, and security tests (attack prevention).
+//! System integration tests (BALANCED): game init, end_run (client-submitted state),
+//! submit_leaderboard, error cases, and security tests.
 
 #[cfg(test)]
 mod tests {

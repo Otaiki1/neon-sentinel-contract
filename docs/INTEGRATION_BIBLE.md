@@ -25,7 +25,7 @@ The frontend typically:
 After `sozo migrate`, you get a **world address**. System contracts are registered under that world.
 
 - Get the world address from the migrate output or from your deployment config.
-- Resolve system contract addresses via the world’s DNS/registry (e.g. `world.get_contract_address("neon_sentinel", "init_game")` or your SDK’s equivalent). In Sozo, system names are like `neon_sentinel-init_game`, `neon_sentinel-execute_tick`, etc.
+- Resolve system contract addresses via the world’s DNS/registry (e.g. `world.get_contract_address("neon_sentinel", "init_game")` or your SDK’s equivalent). In Sozo, system names are like `neon_sentinel-init_game`, `neon_sentinel-end_run`, etc. (BALANCED: no execute_tick or hit_registration on-chain.)
 
 For local dev, `dojo_dev.toml` and Torii config use the same world.
 
@@ -48,46 +48,21 @@ Start a new run.
 - **Preconditions:** No active run; sufficient coins if `expected_cost > 0`
 - **Effect:** Creates Player and RunState; deducts coins; emits game_start and (if cost > 0) coin-spend event
 
-### 3.2 execute_tick
+### 3.2 end_run (BALANCED)
 
-Process one game tick.
-
-- **Contract:** `neon_sentinel-execute_tick`
-- **Method:** `execute_tick(run_id, player_input, sig_r, sig_s, enemy_ids)`
-- **Parameters:**
-    - `run_id`: u256 — From current Player.run_id
-    - `player_input`: u8 — Low 3 bits: direction (0=idle, 1=left, 2=right, 3=up, 4=down); high bits: action (e.g. 0=none, 1=shoot, 2=overclock, …)
-    - `sig_r`, `sig_s`: u256 — Signature (placeholder for future auth)
-    - `enemy_ids`: Array<u256> — Enemies to process this tick (e.g. visible/active IDs)
-- **Preconditions:** Run active; run not finished; next tick sequential; block_number > last_tick_block
-- **Effect:** Updates Player (position, lives, meters), RunState, Enemies; writes GameTick
-
-### 3.3 hit_registration
-
-Register a bullet hit on an enemy.
-
-- **Contract:** `neon_sentinel-hit_registration`
-- **Method:** `hit_registration(run_id, enemy_id, damage, player_x, player_y, hit_proof)`
-- **Parameters:**
-    - `run_id`: u256
-    - `enemy_id`: u256
-    - `damage`: u32 — Base damage (kernel/upgrades applied on-chain)
-    - `player_x`, `player_y`: u32 — Must match current Player position (anti-spoof)
-    - `hit_proof`: u256 — Reserved for future proof
-- **Preconditions:** Run active; enemy exists, active, same run/player; distance ≤ 50; position matches
-- **Effect:** Reduces enemy health; on kill: score, combo, events (hit, powerup, layer)
-
-### 3.4 end_run
-
-Finish the current run.
+Finish the current run with **client-submitted** final state. Client simulates gameplay locally; chain accepts final score, total kills, and final layer.
 
 - **Contract:** `neon_sentinel-end_run`
-- **Method:** `end_run(run_id)`
-- **Parameters:** `run_id`: u256
+- **Method:** `end_run(run_id, final_score, total_kills, final_layer)`
+- **Parameters:**
+    - `run_id`: u256 — From current Player.run_id
+    - `final_score`: u64 — Client-submitted run score
+    - `total_kills`: u32 — Client-submitted enemy kill count
+    - `final_layer`: u8 — Client-submitted deepest layer reached
 - **Preconditions:** Caller has active run with that run_id; run not already finished
-- **Effect:** Sets is_finished, final_score, final_layer; player inactive; game_end event
+- **Effect:** Sets is_finished, final_score, enemies_defeated, final_layer; updates PlayerProfile (total_runs, lifetime_enemies_defeated, lifetime_score, best_run_score, current_layer); awards +10 coins if final_score >= 1000; player inactive; game_end event
 
-### 3.5 submit_leaderboard
+### 3.3 submit_leaderboard
 
 Submit a finished run to the weekly leaderboard.
 
@@ -99,7 +74,7 @@ Submit a finished run to the weekly leaderboard.
 - **Preconditions:** Run finished; not already submitted; week matches current block-based week
 - **Effect:** Creates LeaderboardEntry (immutable); sets submitted_to_leaderboard
 
-### 3.6 claim_coins
+### 3.4 claim_coins
 
 Daily coin claim.
 
@@ -109,7 +84,7 @@ Daily coin claim.
 - **Preconditions:** At least 7200 blocks since last claim (or first claim)
 - **Effect:** +3 coins; updates last_coin_claim_block and coin history; emits CoinClaimed
 
-### 3.7 spend_coins
+### 3.5 spend_coins
 
 Spend coins (generic; init_game does its own spend for upgrades).
 
@@ -235,23 +210,14 @@ Use Torii subscriptions or event filters to update the UI when a run advances, a
 4. Call **init_game**(kernel, pregame_upgrades_mask, expected_cost).
 5. Refresh Player and RunState; show run UI.
 
-### 7.4 Game loop (each tick)
+### 7.4 Gameplay (client-side, BALANCED)
 
-1. Get current block (from RPC or Torii).
-2. Build `player_input` (direction + action), `enemy_ids` (enemies to process).
-3. Call **execute_tick**(run_id, player_input, 0, 0, enemy_ids) (sig 0,0 for placeholder).
-4. Wait for tx; then refresh Player, RunState, Enemies (and optional GameTick/GameEvent).
+1. Simulate the run locally: movement, collisions, hits, score, kills, layer.
+2. When the run ends (player quits or game over), compute final_score, total_kills, final_layer from your simulation.
 
-### 7.5 Register a hit
+### 7.5 End run and submit to leaderboard
 
-When your client detects a hit (within range):
-
-1. Call **hit_registration**(run_id, enemy_id, damage, player_x, player_y, 0) with current Player (x, y).
-2. Refresh RunState and Enemy; optionally subscribe to GameEvent for hit/powerup/layer.
-
-### 7.6 End run and submit to leaderboard
-
-1. Call **end_run**(run_id). Refresh Player (is_active false) and RunState (is_finished, final_score).
+1. Call **end_run**(run_id, final_score, total_kills, final_layer) with the client-computed values. Refresh Player (is_active false), RunState (is_finished, final_score, enemies_defeated, final_layer), and PlayerProfile (total_runs, lifetime stats, bonus coins if score >= 1000).
 2. Compute current week: `week = floor(block_number / 50400)`.
 3. Call **submit_leaderboard**(run_id, week). Refresh RunState (submitted_to_leaderboard) and LeaderboardEntry list.
 
@@ -267,12 +233,8 @@ When your client detects a hit (within range):
 - **Invalid kernel** — kernel must be 0..5.
 - **Insufficient coins** — Profile.coins < expected_cost or spend amount.
 - **Active run exists** — Cannot init_game while Player.is_active.
-- **Run not active** / **Run id mismatch** — execute_tick / hit_registration / end_run with wrong or inactive run.
-- **Run finished** — execute_tick or hit_registration after end_run.
-- **Block must increase** — Replay: same or older block for execute_tick.
-- **Tick not sequential** — execute_tick called out of order.
-- **Position mismatch** — hit_registration player_x/player_y ≠ on-chain Player position.
-- **Out of range** — hit_registration distance > 50.
+- **Run not active** / **Run id mismatch** — end_run with wrong or inactive run.
+- **Already finished** — end_run called twice for same run.
 - **Already submitted** — submit_leaderboard called twice for same run.
 - **Week mismatch** — submit_leaderboard week ≠ current_leaderboard_week(block).
 - **Too soon to claim** — claim_coins before 7200 blocks since last claim.
@@ -302,7 +264,7 @@ Map these to user-facing messages and disable/validate UI (e.g. “Wait X blocks
 
 - [ ] Resolve world and system addresses (from migrate or config).
 - [ ] Use Torii GraphQL (or RPC) to load Player, RunState, PlayerProfile, Enemies, LeaderboardEntry.
-- [ ] Implement init_game, execute_tick, hit_registration, end_run, submit_leaderboard, claim_coins, buy_coins (and spend_coins if needed).
+- [ ] Implement init_game, end_run(run_id, final_score, total_kills, final_layer), submit_leaderboard, claim_coins, buy_coins (and spend_coins if needed). Simulate gameplay client-side and call end_run with final state.
 - [ ] Use block number for cooldowns and week; do not rely on client time for game rules.
 - [ ] Handle revert reasons and show clear errors.
 - [ ] Subscribe to events or poll state after transactions for a responsive UI.
