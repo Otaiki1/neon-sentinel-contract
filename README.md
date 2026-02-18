@@ -172,7 +172,7 @@ For **production (Sepolia)** world address and Torii/GraphQL URLs, see [INTEGRAT
 
 ## Quick Flow Summary
 
-1. **Profile / coins** — Ensure the player has a `PlayerProfile` (e.g. seeded). They can `claim_coins` once per 24h (≈7200 blocks) or `buy_coins(amount_strk, max_coins_expected)` to purchase coins with STRK (after the shop is initialized and STRK approved).
+1. **Profile / coins** — Ensure the player has a `PlayerProfile` (e.g. seeded). They can `claim_coins` once per 24h (≈7200 blocks) or `buy_coins(amount_strk)` to purchase coins with STRK (coins = amount_strk × exchange_rate; shop must be initialized and STRK approved).
 2. **Start run** — `init_game(kernel, pregame_upgrades_mask, expected_cost)`. Creates `Player` and `RunState`, deducts coins if `expected_cost > 0`.
 3. **Play (client-side)** — Simulate ticks, movement, hits, and score locally. No on-chain tick or hit systems in BALANCED.
 4. **End run** — `end_run(run_id, final_score, total_kills, final_layer)`. Submits client-computed final state; sets `is_finished`, updates Profile and (if score ≥ 1000) awards bonus coins; marks player inactive.

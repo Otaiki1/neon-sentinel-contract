@@ -291,7 +291,7 @@ Every model is a `#[dojo::model]` struct. Keys are marked with `#[key]` and uniq
 
 ### 4.7 buy_coins
 
-- **Purpose:** User purchases in-game coins with STRK. User must approve STRK to the buy_coins contract; then calls buy_coins(amount_strk, max_coins_expected). Coins = amount_strk * exchange_rate (u32); max_coins_expected must match (slippage protection). STRK is transferFrom(caller → contract); profile coins and log hash/count updated. Max 1000 STRK per tx. Writes CoinPurchaseRecord, CoinPurchaseHistory. Owner can withdraw_strk, request_withdrawal + execute_withdrawal (with delay), and pause/unpause via pause_unpause_purchasing.
+- **Purpose:** User purchases in-game coins with STRK. User must approve STRK to the buy_coins contract; then calls buy_coins(amount_strk). Coins = amount_strk * exchange_rate (u32); no slippage parameter. STRK is transferFrom(caller → contract); profile coins and log hash/count updated. Max 1000 STRK per tx. Writes CoinPurchaseRecord, CoinPurchaseHistory. Owner can withdraw_strk, request_withdrawal + execute_withdrawal (with delay), and pause/unpause via pause_unpause_purchasing.
 - **Writers:** CoinShopGlobal (totals, paused), PlayerProfile (coins, log, count), CoinPurchaseRecord, CoinPurchaseHistory, WithdrawalRequest. Emits CoinsPurchased, StrkWithdrawn, WithdrawalRequestCreated, WithdrawalExecuted, etc.
 
 ### 4.8 update_exchange_rate

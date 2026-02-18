@@ -11,7 +11,8 @@ const WITHDRAWAL_DELAY_BLOCKS: u64 = 100;
 
 #[starknet::interface]
 pub trait IBuyCoins<T> {
-    fn buy_coins(ref self: T, amount_strk: u256, max_coins_expected: u256) -> u256;
+    /// Purchase in-game coins with STRK. Coins = amount_strk * exchange_rate (set rate only; no max_coins_expected).
+    fn buy_coins(ref self: T, amount_strk: u256) -> u256;
     fn withdraw_strk(ref self: T, amount_strk: u256, notes: felt252) -> u256;
     fn get_treasury_balance(ref self: T) -> u256;
     fn get_treasury_info(ref self: T) -> (u256, u256, u256, u256);
@@ -95,7 +96,7 @@ pub mod buy_coins {
 
     #[abi(embed_v0)]
     impl BuyCoinsImpl of IBuyCoins<ContractState> {
-        fn buy_coins(ref self: ContractState, amount_strk: u256, max_coins_expected: u256) -> u256 {
+        fn buy_coins(ref self: ContractState, amount_strk: u256) -> u256 {
             let mut world = self.world_default();
             let caller = get_caller_address();
             let exec_info = get_execution_info();
@@ -112,23 +113,16 @@ pub mod buy_coins {
             assert(config.is_enabled, 'Purchasing disabled');
             assert(!config.paused, 'Purchasing paused');
 
-            // 3. Validate STRK amount (> 0, <= max, no overflow when * 5)
+            // 3. Validate STRK amount (> 0, <= max, no overflow when * rate)
             assert(ValidateStrkAmountTrait::validate_strk_amount(amount_strk), 'Invalid STRK amount');
 
-            // 4. Calculate coins: amount_strk * exchange_rate (overflow-safe)
+            // 4. Calculate coins from set rate only: coins = amount_strk * exchange_rate (no client-supplied expected)
             let (coins_to_mint, overflow) =
                 CalculateCoinsFromStrkTrait::calculate_coins_from_strk(
                     amount_strk,
                     config.coin_exchange_rate,
                 );
             assert(!overflow, 'Exchange overflow');
-
-            // SECURITY: Reject client manipulation — only accept exact calculated amount
-            assert(
-                max_coins_expected.low == coins_to_mint.low
-                    && max_coins_expected.high == coins_to_mint.high,
-                'Expected coins mismatch',
-            );
 
             // Coins added to profile are u32 — ensure result fits
             assert(coins_to_mint.high == 0, 'Coins exceed u32');

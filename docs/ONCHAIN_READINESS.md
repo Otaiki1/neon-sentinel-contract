@@ -28,7 +28,7 @@ This document maps the **frontend game** (React + Phaser, currently localStorage
 - **Coins**
   - **claim_coins()** — Daily claim (3 coins per 7200 blocks). ✅
   - **spend_coins(amount, reason)** — Generic spend; used by init_game for pregame upgrades and can be used for other reasons. ✅
-  - **buy_coins(amount_strk, max_coins_expected)** — STRK → in-game coins; shop must be initialized; owner can pause/update rate. ✅
+  - **buy_coins(amount_strk)** — STRK → in-game coins (coins = amount_strk × exchange_rate); shop must be initialized; owner can pause/update rate. ✅
 - **Coin state** — Stored in **PlayerProfile** (coins, last_coin_claim_block, coin_transaction_log_hash, coin_transaction_count). ✅
 - **STRK shop** — CoinShopGlobal, TokenPurchaseConfig, CoinPurchaseRecord, CoinPurchaseHistory, WithdrawalRequest; initialize_coin_shop, update_exchange_rate, pause_unpause_purchasing. ✅
 

@@ -17,8 +17,8 @@ Use this checklist to verify the STRK → in-game coins flow on a deployed world
 ## BASIC FUNCTIONALITY
 
 - [ ] User approves STRK token to the buy_coins contract (ERC20 `approve`)
-- [ ] User calls `buy_coins(amount_strk, max_coins_expected)` with `max_coins_expected = amount_strk * 5`
-- [ ] Verify player received `amount_strk * 5` coins (e.g. 10 STRK → 50 coins)
+- [ ] User calls `buy_coins(amount_strk)` (coins = amount_strk × exchange_rate, e.g. rate 5 → 10 STRK → 50 coins)
+- [ ] Verify player received amount_strk × rate coins
 - [ ] Check purchase record exists (CoinPurchaseRecord) in Torii / world state
 - [ ] Check CoinPurchaseHistory updated for the player
 
@@ -71,7 +71,6 @@ Use this checklist to verify the STRK → in-game coins flow on a deployed world
 - [ ] Non-owner calls `pause_unpause_purchasing` → fails with "Not owner"
 - [ ] Buy with `amount_strk = 0` → fails with "Invalid STRK amount"
 - [ ] Buy with `amount_strk > 1000` → fails with "Invalid STRK amount" / max
-- [ ] Buy with wrong `max_coins_expected` (e.g. 99 instead of 50 for 10 STRK) → fails with "Expected coins mismatch"
 - [ ] Owner withdraws more than available → fails with "Exceeds available" or "STRK transfer failed"
 
 ---

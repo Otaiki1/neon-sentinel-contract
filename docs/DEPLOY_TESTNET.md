@@ -201,7 +201,7 @@ If you use the STRK → in-game coins flow:
    ```
    Exchange rate must be between 3 and 10 (e.g. 5 = 5 coins per STRK).
 
-3. After that, players can `approve` STRK to the `buy_coins` contract and call `buy_coins(amount_strk, max_coins_expected)`.
+3. After that, players can `approve` STRK to the `buy_coins` contract and call `buy_coins(amount_strk)` (coins = amount_strk × exchange_rate).
 
 See [MANUAL_TESTING_STRK.md](MANUAL_TESTING_STRK.md) for a full checklist.
 

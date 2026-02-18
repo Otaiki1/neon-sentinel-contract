@@ -320,9 +320,9 @@ await account.execute({
 
 - **Contract address:** `NEON_SENTINEL.BUY_COINS`
 - **Entrypoint:** `buy_coins`
-- **Calldata:** `[amount_strk_low, amount_strk_high, max_coins_expected_low, max_coins_expected_high]`
+- **Calldata:** `[amount_strk_low, amount_strk_high]`
   - User must **approve STRK** to the `BUY_COINS` contract first (ERC20 approve).
-  - `max_coins_expected` = amount_strk × exchange_rate (from TokenPurchaseConfig); use for slippage.
+  - Coins received = amount_strk × exchange_rate (from TokenPurchaseConfig); no slippage parameter.
 
 STRK token address is in **TokenPurchaseConfig** (query via Torii or read from your config if known). The game coin is not a real token; the STRK→coin exchange rate can be set later by the owner via **update_exchange_rate**.
 
@@ -447,7 +447,7 @@ The integration tests in **`src/tests/test_systems_integration.cairo`** mirror t
 ### 7.2 Claim or buy coins
 
 - **Claim:** If `block_number - last_coin_claim_block >= 7200` (or first claim), call **claim_coins** (no calldata). Get block number from provider.
-- **Buy with STRK:** Approve STRK to `NEON_SENTINEL.BUY_COINS`, then call **buy_coins**(amount_strk, max_coins_expected). Use **TokenPurchaseConfig** for exchange_rate.
+- **Buy with STRK:** Approve STRK to `NEON_SENTINEL.BUY_COINS`, then call **buy_coins**(amount_strk). Coins = amount_strk × exchange_rate from **TokenPurchaseConfig**.
 
 ### 7.3 Start a run (init_game)
 
@@ -487,7 +487,7 @@ Map contract reverts to user-facing messages:
 | Week mismatch | "Submit in the correct leaderboard week." |
 | Too soon to claim | "Next claim in X blocks." |
 | Purchasing paused | "Coin shop is paused." |
-| Expected coins mismatch / STRK | "Slippage or STRK approval issue." |
+| STRK / approval / amount | "Check STRK approval and amount; shop may be paused." |
 
 Use block number for cooldowns and week; do not rely on client time for game rules.
 

@@ -47,7 +47,7 @@ Review performed using the **dojo-review** skill. This document summarizes best-
   - `claim_coins`: cooldown (blocks since last claim). ✅  
   - `submit_leaderboard`: finished, not submitted, week match. ✅  
   - `update_exchange_rate` / `pause_unpause_purchasing`: owner check. ✅  
-  - `buy_coins`: amount, allowance, balance, slippage, paused. ✅  
+  - `buy_coins`: amount, allowance, balance, rate-based coins, paused. ✅  
 - **Events:** Important actions emit events (game_start/game_end, CoinSpent, CoinClaimed, CoinsPurchased, etc.). ✅  
 - **Caller identity:** Systems use `get_caller_address()` for player/owner; no delegation. ✅  
 
