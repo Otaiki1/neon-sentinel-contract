@@ -7,14 +7,11 @@ use core::integer::u256;
 /// Event type: game_start (per Phase 2 GameEvent spec).
 const EVENT_TYPE_GAME_START: u8 = 6;
 
-/// Max valid kernel index (0-5).
-const MAX_KERNEL: u8 = 5;
+/// Max valid kernel index (0..10).
+const MAX_KERNEL: u8 = 10;
 
-/// Max allowed pregame upgrades mask (all bits allowed for now).
-const MAX_PREGAME_UPGRADES_MASK: u256 = u256 { low: 0xffffffffffffffffffffffffffffffff, high: 0xffffffffffffffffffffffffffffffff };
-
-/// Coin cost per upgrade bit (for compute_upgrade_cost).
-const COIN_PER_UPGRADE: u32 = 1;
+/// Max allowed pregame upgrades mask (bits 0..6 = 7 upgrades).
+const MAX_PREGAME_UPGRADES_MASK: u256 = u256 { low: 0x7f, high: 0 }; // 7 bits set
 
 /// Starting position and lives.
 const START_X: u32 = 0;
@@ -48,11 +45,19 @@ pub mod init_game {
     use starknet::{ContractAddress, get_caller_address, get_execution_info};
 
     use super::{
-        COMBO_ONE, COIN_PER_UPGRADE, EVENT_TYPE_GAME_START, MAX_KERNEL, MAX_LIVES,
+        COMBO_ONE, EVENT_TYPE_GAME_START, MAX_KERNEL, MAX_LIVES,
         MAX_PREGAME_UPGRADES_MASK, REASON_PREGAME_UPGRADES, START_LIVES, START_X, START_Y,
         TWO_POW_64,
     };
     use super::IInitGame;
+    use neon_sentinel::coin_shop_config::{
+        PRICE_PREGAME_0, PRICE_PREGAME_1, PRICE_PREGAME_2, PRICE_PREGAME_3,
+        PRICE_PREGAME_4, PRICE_PREGAME_5, PRICE_PREGAME_6,
+        PRESTIGE_KERNEL_0, PRESTIGE_KERNEL_1, PRESTIGE_KERNEL_2, PRESTIGE_KERNEL_3,
+        PRESTIGE_KERNEL_4, PRESTIGE_KERNEL_5, PRESTIGE_KERNEL_6, PRESTIGE_KERNEL_7,
+        PRESTIGE_KERNEL_8, PRESTIGE_KERNEL_9, PRESTIGE_KERNEL_10,
+        KERNEL_10_ID,
+    };
     use neon_sentinel::models::{GameEvent, Player, PlayerProfile, RunState};
 
     /// Append transaction to log hash chain (same as spend_coins / claim_coins).
@@ -70,6 +75,33 @@ pub mod init_game {
         pub amount: u32,
         pub reason: felt252,
         pub block_number: u64,
+    }
+
+    /// Prestige required to use kernel (0..10). Used for init_game validation.
+    fn kernel_prestige_required(kernel_id: u8) -> u8 {
+        if kernel_id == 0 {
+            PRESTIGE_KERNEL_0
+        } else if kernel_id == 1 {
+            PRESTIGE_KERNEL_1
+        } else if kernel_id == 2 {
+            PRESTIGE_KERNEL_2
+        } else if kernel_id == 3 {
+            PRESTIGE_KERNEL_3
+        } else if kernel_id == 4 {
+            PRESTIGE_KERNEL_4
+        } else if kernel_id == 5 {
+            PRESTIGE_KERNEL_5
+        } else if kernel_id == 6 {
+            PRESTIGE_KERNEL_6
+        } else if kernel_id == 7 {
+            PRESTIGE_KERNEL_7
+        } else if kernel_id == 8 {
+            PRESTIGE_KERNEL_8
+        } else if kernel_id == 9 {
+            PRESTIGE_KERNEL_9
+        } else {
+            PRESTIGE_KERNEL_10
+        }
     }
 
     /// 2^n for n in 0..=63 (used for kernel_unlocks bit check).
@@ -95,22 +127,39 @@ pub mod init_game {
         u256 { low, high }
     }
 
-    /// Expected coin cost from pregame upgrades mask (popcount * COIN_PER_UPGRADE).
+    /// Price for pregame upgrade at bit index (0..6). Used by compute_upgrade_cost.
+    fn pregame_price_at(bit_index: u8) -> u32 {
+        if bit_index == 0 {
+            PRICE_PREGAME_0
+        } else if bit_index == 1 {
+            PRICE_PREGAME_1
+        } else if bit_index == 2 {
+            PRICE_PREGAME_2
+        } else if bit_index == 3 {
+            PRICE_PREGAME_3
+        } else if bit_index == 4 {
+            PRICE_PREGAME_4
+        } else if bit_index == 5 {
+            PRICE_PREGAME_5
+        } else {
+            PRICE_PREGAME_6
+        }
+    }
+
+    /// Expected coin cost from pregame upgrades mask (sum of prices for set bits 0..6).
     fn compute_upgrade_cost(mask: u256) -> u32 {
         let mut cost: u32 = 0;
-        let mut m_low = mask.low;
-        let mut m_high = mask.high;
-        while m_low != 0 {
-            if m_low & 1 != 0 {
-                cost += COIN_PER_UPGRADE;
+        let mut m = mask.low;
+        let mut i: u8 = 0;
+        loop {
+            if i >= 7 {
+                break;
             }
-            m_low /= 2;
-        }
-        while m_high != 0 {
-            if m_high & 1 != 0 {
-                cost += COIN_PER_UPGRADE;
+            if m - (m / 2) * 2 != 0 {
+                cost += pregame_price_at(i);
             }
-            m_high /= 2;
+            m = m / 2;
+            i += 1;
         }
         cost
     }
@@ -130,9 +179,16 @@ pub mod init_game {
             let block_number = exec_info.block_info.block_number;
             let block_timestamp = exec_info.block_info.block_timestamp;
 
-            // 1. Validate kernel (0-5) and that caller owns it (kernel 0 always unlocked)
+            // 1. Validate kernel (0..10), ownership, prestige, and for kernel 10 (Transcendent) is_prime_sentinel
             assert(kernel <= MAX_KERNEL, 'Invalid kernel');
             let mut profile: PlayerProfile = world.read_model(caller);
+            assert(
+                profile.current_prestige >= kernel_prestige_required(kernel),
+                'Prestige too low for kernel',
+            );
+            if kernel == KERNEL_10_ID {
+                assert(profile.is_prime_sentinel, 'Need Prime Sentinel');
+            }
             if kernel > 0 {
                 let bit = pow2_u64(kernel);
                 assert(
@@ -207,6 +263,7 @@ pub mod init_game {
                 final_layer: 0,
                 submitted_to_leaderboard: false,
                 pregame_upgrades_mask,
+                revive_count: 0,
             };
             world.write_model(@run_state);
 

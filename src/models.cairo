@@ -92,6 +92,8 @@ pub struct RunState {
     pub submitted_to_leaderboard: bool,
     /// Attestation: which pregame upgrades were used for this run (set at start_run).
     pub pregame_upgrades_mask: u256,
+    /// Number of revives used this run; cost = 100 * 2^revive_count.
+    pub revive_count: u32,
 }
 
 /// Enemy instance. SECURITY: position is server-calculated; spawn/destroy use block time;
@@ -222,6 +224,10 @@ pub struct PlayerProfile {
     pub profile_hash: u256,
     /// Highest rank tier (prestige*6 + layer-1) for which a RankNFT was minted; avoids duplicate mints.
     pub highest_rank_tier_minted: u8,
+    /// Last block at which Prime Sentinel daily bonus was claimed (3 coins once per 7200 blocks).
+    pub last_prime_sentinel_claim_block: u64,
+    /// Number of Mini-Me session packs purchased (+3 sessions each); capacity = 3 + this*3.
+    pub mini_me_sessions_purchased: u32,
 }
 
 /// Rank achievement NFT (soulbound). Minted when player reaches a new rank tier.
@@ -296,6 +302,17 @@ pub struct CoinPurchaseHistory {
     pub last_purchase_block: u64,
     pub last_claimed_coins_block: u64,
     pub verified_purchases: u32,
+}
+
+/// Mini-Me companion inventory: per player, per unit type (0..6), count up to 20.
+#[derive(Copy, Drop, Serde, Debug)]
+#[dojo::model]
+pub struct MiniMeInventory {
+    #[key]
+    pub player_address: ContractAddress,
+    #[key]
+    pub unit_type: u8,
+    pub count: u8,
 }
 
 /// Owner withdrawal request. Audit trail for treasury management; status lifecycle.
@@ -570,6 +587,7 @@ mod tests {
             final_layer: 0,
             submitted_to_leaderboard: false,
             pregame_upgrades_mask: zero_u256(),
+            revive_count: 0,
         };
         assert(state.run_id.low == 42, 'run_id');
         assert(state.current_layer == 1, 'layer');
@@ -598,6 +616,7 @@ mod tests {
             final_layer: 0,
             submitted_to_leaderboard: false,
             pregame_upgrades_mask: zero_u256(),
+            revive_count: 0,
         };
         assert(state.score == 0, 'score');
         assert(state.total_ticks_processed == 0, 'total_ticks');
@@ -631,6 +650,7 @@ mod tests {
             final_layer: 0,
             submitted_to_leaderboard: false,
             pregame_upgrades_mask: zero_u256(),
+            revive_count: 0,
         };
         assert(state.is_finished == false, 'is_finished false');
     }

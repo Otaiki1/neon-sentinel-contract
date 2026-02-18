@@ -151,8 +151,10 @@ Every model is a `#[dojo::model]` struct. Keys are marked with `#[key]` and uniq
 | is_finished                                        | bool                  | Set true by end_run; thereafter run state is read-only.                       |
 | final_score, final_layer                           | u64, u8               | Set by end_run from client-submitted values; immutable after.                 |
 | submitted_to_leaderboard                           | bool                  | Set true by submit_leaderboard; at most once per run.                         |
+| pregame_upgrades_mask                              | u256                  | Attestation of which pregame upgrades were used this run (set at init_game).  |
+| revive_count                                       | u32                   | Number of revives used this run; cost = 100×2^revive_count. Updated by spend_revive. |
 
-**Writers (BALANCED):** init_game (create), end_run (set finished + final_score, enemies_defeated, final_layer), submit_leaderboard (set submitted_to_leaderboard only).  
+**Writers (BALANCED):** init_game (create), end_run (set finished + final_score, enemies_defeated, final_layer), submit_leaderboard (set submitted_to_leaderboard only), spend_revive (revive_count only).  
 **Invariants:** After `is_finished == true`, no system modifies score, layer, or enemies_defeated; only `submitted_to_leaderboard` may be set to true.
 
 ### 3.3 Enemy
@@ -230,16 +232,22 @@ Every model is a `#[dojo::model]` struct. Keys are marked with `#[key]` and uniq
 | current_prestige, current_layer, highest_prestige_reached         | u8              | Progress.                                                              |
 | is_prime_sentinel                                                 | bool            | Flag.                                                                  |
 | total_runs, lifetime_score, lifetime_playtime_blocks, ...         | u32/u64         | Aggregates.                                                            |
-| coins                                                             | u32             | Balance; increased by claim_coins and buy_coins, decreased by init_game/spend_coins. |
+| coins                                                             | u32             | Balance; increased by claim_coins, buy_coins, end_run (prestige/score bonus); decreased by init_game, spend_coins, spend_revive, purchase_cosmetic, purchase_mini_me_*. |
 | last_coin_claim_block                                             | u64             | Last claim block; claim_coins requires block - this >= 7200.           |
+| last_prime_sentinel_claim_block                                   | u64             | Last Prime Sentinel bonus claim; 3 extra coins once per 7200 blocks when is_prime_sentinel. |
+| mini_me_sessions_purchased                                       | u32             | Session packs bought; capacity = 3 + this × 3.                        |
 | coin_transaction_log_hash                                         | u256            | Append-only hash chain of coin ops.                                    |
 | coin_transaction_count                                            | u32             | Number of coin transactions.                                           |
 | selected_kernel, kernel_unlocks, avatar_unlocks, cosmetic_unlocks | u8/u64          | Unlocks.                                                               |
 | last_profile_update_block, profile_hash                           | u64, u256       | Metadata.                                                              |
 
-**Writers:** init_game (coins, log hash, count), claim_coins (coins, last_coin_claim_block, log hash, count), spend_coins (coins, log hash, count), buy_coins (coins, log hash, count). Profile is created/updated by systems or by world setup; clients cannot write.
+**Writers:** init_game (coins, log hash, count), claim_coins (coins, last_coin_claim_block, last_prime_sentinel_claim_block, log hash, count), spend_coins (coins, log hash, count), buy_coins (coins, log hash, count), spend_revive (coins, log hash, count), purchase_cosmetic (coins, kernel_unlocks, log hash, count), purchase_mini_me_unit (coins, log hash, count), purchase_mini_me_sessions (coins, mini_me_sessions_purchased, log hash, count). Profile is created/updated by systems or by world setup; clients cannot write.
 
-### 3.8 Coin Shop Models
+### 3.8 MiniMeInventory
+
+- **Keys:** player_address, unit_type (u8, 0..6). **Fields:** count (u8, max 20 per type). Writer: purchase_mini_me_unit.
+
+### 3.9 Coin Shop Models
 
 - **CoinShopGlobal** — Singleton (key = 0): global_key, owner only. Used to resolve the owner so systems can read TokenPurchaseConfig by owner. Writers: initialize_coin_shop (create).
 - **TokenPurchaseConfig** — Key: owner (ContractAddress). Holds strk_token_address, coin_exchange_rate, total_strk_collected, total_strk_withdrawn, total_coins_sold, paused, last_updated, next_withdrawal_id, etc. Writers: initialize_coin_shop (one-time), update_exchange_rate (rate only), pause_unpause_purchasing (paused), buy_coins (totals, withdrawals).
@@ -255,15 +263,16 @@ Every model is a `#[dojo::model]` struct. Keys are marked with `#[key]` and uniq
 
 - **Purpose:** Start a new run: create Player and RunState, optionally spend coins on pregame upgrades, emit game_start.
 - **run_id:** `compute_run_seed(block_number, block_timestamp, caller)` → u256 with low = block_number + block_timestamp \* 2^64, high = 0.
-- **Upgrade cost:** `compute_upgrade_cost(mask)` = popcount(mask) \* COIN_PER_UPGRADE (1). Client must pass the same value as `expected_cost`; contract asserts equality.
-- **Coin accounting:** If expected_cost > 0, profile.coins is decreased, coin_transaction_log_hash is updated with `next_coin_log_hash(prev, block_number, amount)`, coin_transaction_count incremented, and a CoinSpent-style event emitted (reason: pregame_upgrades).
-- **Initial state:** Player at (0,0), lives 3, max_lives 20, combo 1000, layer 1, invincible_until_block = block_number, tick_counter 0; RunState score 0, is_finished false, submitted_to_leaderboard false.
+- **Kernel:** Valid 0..10. Must own kernel (kernel_unlocks bit set; kernel 0 always allowed). Requires profile.current_prestige >= prestige_required(kernel). Kernel 10 also requires profile.is_prime_sentinel.
+- **Upgrade cost:** `compute_upgrade_cost(mask)` = sum of pregame prices for set bits 0..6 (see coin_shop_config: 25, 50, 40, 45, 40, 35, 30). Client must pass this as `expected_cost`; contract asserts equality.
+- **Coin accounting:** If expected_cost > 0, profile.coins decreased, coin_transaction_log_hash and coin_transaction_count updated, CoinSpent emitted (reason: pregame_upgrades).
+- **Initial state:** Player at (0,0), lives 3, max_lives 20, layer 1, invincible_until_block = block_number; RunState score 0, is_finished false, submitted_to_leaderboard false, revive_count 0.
 
 ### 4.2 end_run (BALANCED)
 
 - **Purpose:** Finalize the run with **client-submitted** final state. Client simulates gameplay locally (ticks, hits, score); chain accepts final_score, total_kills, final_layer.
 - **Signature:** `end_run(run_id, final_score, total_kills, final_layer)`. Parameters: run_id (u256), final_score (u64), total_kills (u32), final_layer (u8).
-- **Logic:** Assert run active and not already finished; set RunState.is_finished = true, final_score, enemies_defeated = total_kills, final_layer, last_tick_block; set Player.is_active = false; update PlayerProfile (total_runs += 1, lifetime_enemies_defeated += total_kills, lifetime_score += final_score, best_run_score if improved, current_layer if final_layer higher); award bonus coins if final_score >= LEADERBOARD_MIN_SCORE (1000); emit game_end GameEvent; write RunState, Player, PlayerProfile.
+- **Logic:** Assert run active and not already finished; set RunState.is_finished = true, final_score, enemies_defeated = total_kills, final_layer, last_tick_block; set Player.is_active = false; update PlayerProfile (total_runs += 1, lifetime_enemies_defeated += total_kills, lifetime_score += final_score, best_run_score if improved, current_layer if final_layer higher); award bonus coins if final_score >= LEADERBOARD_MIN_SCORE (1000); if final_layer == 6 (cleared), award prestige coins 2×2^current_prestige and advance current_prestige/highest_prestige_reached, and if current_prestige was 8 set is_prime_sentinel = true; mint RankNFT when new tier; emit game_end GameEvent; write RunState, Player, PlayerProfile.
 - **Constants:** LEADERBOARD_MIN_SCORE = 1000, SCORE_BONUS_COINS = 10.
 - **Trust:** Chain trusts client-submitted score/kills/layer. Leaderboard and coins remain chain-verified; optional replay/bounds checks can be added later.
 
@@ -277,8 +286,8 @@ Every model is a `#[dojo::model]` struct. Keys are marked with `#[key]` and uniq
 
 ### 4.4 claim_coins
 
-- **Purpose:** Grant 3 coins once per 24h (7200 blocks). First claim allowed when last_coin_claim_block == 0; otherwise block_number - last_coin_claim_block >= 7200.
-- **Accounting:** Same next_coin_log_hash and coin_transaction_count increment as spend path; emits CoinClaimed.
+- **Purpose:** Grant 3 coins once per 24h (7200 blocks). First claim allowed when last_coin_claim_block == 0; otherwise block_number - last_coin_claim_block >= 7200. If profile.is_prime_sentinel and (last_prime_sentinel_claim_block == 0 or block - last_prime_sentinel_claim_block >= 7200), grant 3 extra coins and set last_prime_sentinel_claim_block = block_number.
+- **Accounting:** Same next_coin_log_hash and coin_transaction_count increment; emits CoinClaimed.
 
 ### 4.5 spend_coins
 
@@ -286,7 +295,7 @@ Every model is a `#[dojo::model]` struct. Keys are marked with `#[key]` and uniq
 
 ### 4.6 initialize_coin_shop
 
-- **Purpose:** One-time setup of the STRK → coins shop. Caller becomes owner. Sets CoinShopGlobal (owner, paused false), TokenPurchaseConfig (strk_token_address, exchange_rate). Exchange rate must be in [3, 10]. Re-initialization blocked by existing config check.
+- **Purpose:** One-time setup of the STRK → coins shop. Caller becomes owner. Sets CoinShopGlobal (owner, paused false), TokenPurchaseConfig (strk_token_address, exchange_rate). Exchange rate must be in [3, 100]. Re-initialization blocked by existing config check.
 - **Writers:** Creates/updates CoinShopGlobal, TokenPurchaseConfig. Emits CoinShopInitialized.
 
 ### 4.7 buy_coins
@@ -296,13 +305,29 @@ Every model is a `#[dojo::model]` struct. Keys are marked with `#[key]` and uniq
 
 ### 4.8 update_exchange_rate
 
-- **Purpose:** Owner-only. Updates TokenPurchaseConfig.coin_exchange_rate. New rate must be within [3, 10] and within ±20% of previous rate. Emits ExchangeRateUpdated.
+- **Purpose:** Owner-only. Updates TokenPurchaseConfig.coin_exchange_rate. New rate must be within [3, 100] and within ±20% of previous rate. Emits ExchangeRateUpdated.
 
 ### 4.9 pause_unpause_purchasing
 
 - **Purpose:** Owner-only. Toggles TokenPurchaseConfig.paused. When paused, buy_coins reverts. Emits PurchasingPauseToggled.
 
-### 4.10 actions
+### 4.10 purchase_cosmetic (kernels 0..10, price + prestige)
+
+- **Purpose:** Spend coins to unlock kernel (0..10), avatar, or skin. Kernels: per-kernel price and prestige_required from coin_shop_config; kernel 10 also requires is_prime_sentinel. Kernel 0 is free and always unlocked. Deducts coins, sets bit in kernel_unlocks/avatar_unlocks/cosmetic_unlocks, sets selected_kernel for kernel. Avatar/skin: 1 coin per item.
+
+### 4.11 spend_revive
+
+- **Purpose:** During an active run, spend coins to revive. Cost = 100 × 2^RunState.revive_count (1st 100, 2nd 200, …). Asserts run active, run_id match, run not finished, sufficient coins; increments RunState.revive_count and deducts coins. Emits RevivePurchased.
+
+### 4.12 purchase_mini_me_unit
+
+- **Purpose:** Add one Mini-Me unit to inventory (unit_type 0..6). Prices 50, 75, 100, 100, 75, 125, 125. Max 20 per type. Reads/creates MiniMeInventory(player, unit_type), increments count, deducts coins.
+
+### 4.13 purchase_mini_me_sessions
+
+- **Purpose:** Spend 100 coins to add +3 sessions permanently (profile.mini_me_sessions_purchased += 1). Emits MiniMeSessionsPurchased.
+
+### 4.14 actions
 
 - **Purpose:** Starter spawn/move for Position and Moves (demo flow). spawn: sets Position (+10, +10) and Moves (remaining 100). move: decrements remaining moves, updates position by direction, emits Moved.
 - **Safety:** move() asserts `moves.remaining > 0` before decrement to avoid underflow. next_position() only decrements x (Left) or y (Up) when value > 0 to avoid underflow at origin.
@@ -315,8 +340,11 @@ Every model is a `#[dojo::model]` struct. Keys are marked with `#[key]` and uniq
 
 | Constant                                         | Value     | Location                                  | Purpose                 |
 | ------------------------------------------------ | --------- | ----------------------------------------- | ----------------------- |
-| MAX_KERNEL                                       | 5         | init_game                                 | Valid kernel range 0..5 |
-| COIN_PER_UPGRADE                                 | 1         | init_game                                 | Coins per upgrade bit   |
+| MAX_KERNEL                                       | 10        | init_game                                 | Valid kernel range 0..10 |
+| Pregame prices (bit 0..6)                        | 25,50,40,45,40,35,30 | coin_shop_config                 | Coins per pregame upgrade |
+| Kernel prices (0..10)                            | 0,500,500,1500,...7500 | coin_shop_config                 | Coins per kernel        |
+| REVIVE_BASE_COINS                                | 100       | coin_shop_config                          | Revive cost base        |
+| PRICE_MINI_ME_SESSIONS_PACK                      | 100       | coin_shop_config                          | Sessions pack price     |
 | START_X, START_Y                                 | 0, 0      | init_game                                 | Initial position        |
 | START_LIVES, MAX_LIVES                           | 3, 20     | init_game                                 | Lives                   |
 | COMBO_ONE                                        | 1000      | init_game (client-side combo in BALANCED) | 1.0x combo basis        |
@@ -331,7 +359,9 @@ Every model is a `#[dojo::model]` struct. Keys are marked with `#[key]` and uniq
 ### 5.2 Key Formulas
 
 - **run_id (init_game):** `low = block_number + block_timestamp * 2^64`, `high = 0`.
-- **Upgrade cost:** `cost = popcount(pregame_upgrades_mask) * 1`.
+- **Upgrade cost:** `cost = sum of pregame_price(bit_index)` for each set bit 0..6 in mask (prices 25, 50, 40, 45, 40, 35, 30).
+- **Revive cost:** `cost = 100 * 2^RunState.revive_count`.
+- **Prestige coins (end_run, final_layer == 6):** `reward = 2 * 2^current_prestige`; then current_prestige += 1.
 - **Coin log hash (append):** `next_coin_log_hash(prev, block_number, amount)` → low = prev.low + block_number + amount, high = prev.high + 1.
 - **state_hash_for_run (submit_leaderboard):** low = final_score + final_layer * 2^32, high = total_ticks_processed + corruption_level * 2^32 (RunState set by end_run from client).
 - **entry_id:** low = run_id.low + week, high = run_id.high.
@@ -363,7 +393,7 @@ Every model is a `#[dojo::model]` struct. Keys are marked with `#[key]` and uniq
 - **Run lifecycle (BALANCED):** init_game → (client simulates) → end_run(run_id, final_score, total_kills, final_layer) → [submit_leaderboard]. No backward transitions.
 - **Score and kills:** Set by end_run from client-submitted values; leaderboard and coins remain chain-verified.
 - **Position:** Client-side in BALANCED; no on-chain tick or hit systems.
-- **Coins:** Balance changes only via claim_coins (add), buy_coins (add), init_game (subtract for upgrades), spend_coins (subtract); all coin moves update log hash and count.
+- **Coins:** Balance changes via claim_coins (add daily + Prime bonus), buy_coins (add), end_run (prestige coins, score bonus), init_game (subtract for pregame upgrades), spend_coins, spend_revive, purchase_cosmetic, purchase_mini_me_unit, purchase_mini_me_sessions; all coin moves update log hash and count.
 
 ---
 
@@ -417,8 +447,11 @@ src/
     ├── spend_coins.cairo
     ├── buy_coins.cairo            # STRK → in-game coins; treasury; withdrawals
     ├── initialize_coin_shop.cairo  # One-time shop setup (owner)
-    ├── update_exchange_rate.cairo # Owner: change rate (capped)
-    └── pause_unpause_purchasing.cairo  # Owner: pause/unpause buying
+    ├── update_exchange_rate.cairo # Owner: change rate (capped 3..100)
+    ├── pause_unpause_purchasing.cairo  # Owner: pause/unpause buying
+    ├── spend_revive.cairo         # In-run revive (100×2^revive_count)
+    ├── purchase_mini_me_unit.cairo   # Mini-Me inventory (type 0..6)
+    └── purchase_mini_me_sessions.cairo # +3 sessions pack (100 coins)
 src/tests/
 ├── test_coin_shop.cairo
 ├── test_systems_integration.cairo

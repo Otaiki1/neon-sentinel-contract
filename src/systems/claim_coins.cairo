@@ -7,6 +7,9 @@ const BLOCKS_PER_DAY: u64 = 7200;
 /// Coins granted per daily claim.
 const COINS_PER_CLAIM: u32 = 3;
 
+/// Prime Sentinel daily bonus (P8 L6): 3 coins once per 7200 blocks.
+const PRIME_SENTINEL_BONUS_COINS: u32 = 3;
+
 #[starknet::interface]
 pub trait IClaimCoins<T> {
     fn claim_coins(ref self: T);
@@ -19,7 +22,7 @@ pub mod claim_coins {
     use dojo::model::ModelStorage;
     use starknet::{ContractAddress, get_caller_address, get_execution_info};
 
-    use super::{BLOCKS_PER_DAY, COINS_PER_CLAIM};
+    use super::{BLOCKS_PER_DAY, COINS_PER_CLAIM, PRIME_SENTINEL_BONUS_COINS};
     use super::IClaimCoins;
     use neon_sentinel::models::PlayerProfile;
 
@@ -79,6 +82,21 @@ pub mod claim_coins {
 
             // 6. Increment coin_transaction_count
             profile.coin_transaction_count += 1;
+
+            // 6b. Prime Sentinel bonus: 3 extra coins once per 7200 blocks if is_prime_sentinel
+            let can_claim_prime = profile.is_prime_sentinel
+                && (profile.last_prime_sentinel_claim_block == 0
+                    || block_number - profile.last_prime_sentinel_claim_block >= BLOCKS_PER_DAY);
+            if can_claim_prime {
+                profile.coins += PRIME_SENTINEL_BONUS_COINS;
+                profile.last_prime_sentinel_claim_block = block_number;
+                profile.coin_transaction_log_hash = next_coin_log_hash(
+                    profile.coin_transaction_log_hash,
+                    block_number,
+                    PRIME_SENTINEL_BONUS_COINS,
+                );
+                profile.coin_transaction_count += 1;
+            }
 
             world.write_model(@profile);
 

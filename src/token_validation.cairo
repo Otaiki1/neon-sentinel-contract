@@ -13,7 +13,7 @@ fn u256_ge(a: u256, b: u256) -> bool {
     a.high > b.high || (a.high == b.high && a.low >= b.low)
 }
 
-/// 1. Validate STRK amount: > 0, <= MAX_STRK_PURCHASE, and no overflow when multiplied by 5.
+/// 1. Validate STRK amount: > 0, <= MAX_STRK_PURCHASE, and no overflow when multiplied by max rate (100).
 pub trait ValidateStrkAmountTrait {
     fn validate_strk_amount(amount: u256) -> bool;
 }
@@ -28,8 +28,8 @@ impl ValidateStrkAmount of ValidateStrkAmountTrait {
         {
             return false;
         }
-        let rate_5 = u256 { low: 5, high: 0 };
-        let (_, overflow) = core::integer::u256_overflowing_mul(amount, rate_5);
+        let rate_max = u256 { low: 100, high: 0 };
+        let (_, overflow) = core::integer::u256_overflowing_mul(amount, rate_max);
         !overflow
     }
 }

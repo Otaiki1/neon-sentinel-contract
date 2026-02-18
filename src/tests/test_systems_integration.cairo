@@ -29,6 +29,9 @@ mod tests {
     use neon_sentinel::systems::purchase_cosmetic::{
         IPurchaseCosmeticDispatcher, IPurchaseCosmeticDispatcherTrait, purchase_cosmetic,
     };
+    use neon_sentinel::systems::spend_revive::{
+        ISpendReviveDispatcher, ISpendReviveDispatcherTrait, spend_revive,
+    };
     use starknet::testing::set_block_number;
     use starknet::ContractAddress;
 
@@ -56,6 +59,8 @@ mod tests {
                 TestResource::Contract(claim_coins::TEST_CLASS_HASH),
                 TestResource::Contract(purchase_cosmetic::TEST_CLASS_HASH),
                 TestResource::Event(purchase_cosmetic::e_CosmeticPurchased::TEST_CLASS_HASH),
+                TestResource::Contract(spend_revive::TEST_CLASS_HASH),
+                TestResource::Event(spend_revive::e_RevivePurchased::TEST_CLASS_HASH),
             ]
                 .span(),
         };
@@ -74,6 +79,8 @@ mod tests {
             ContractDefTrait::new(@"neon_sentinel", @"claim_coins")
                 .with_writer_of([ns_hash].span()),
             ContractDefTrait::new(@"neon_sentinel", @"purchase_cosmetic")
+                .with_writer_of([ns_hash].span()),
+            ContractDefTrait::new(@"neon_sentinel", @"spend_revive")
                 .with_writer_of([ns_hash].span()),
         ]
             .span()
@@ -109,6 +116,8 @@ mod tests {
             last_profile_update_block: 0,
             profile_hash: zero_u256(),
             highest_rank_tier_minted: 0,
+            last_prime_sentinel_claim_block: 0,
+            mini_me_sessions_purchased: 0,
         };
         world.write_model_test(@profile);
         (world, caller)
@@ -125,14 +134,18 @@ mod tests {
 
         set_block_number(2000);
         let (mut world, caller) = setup_world_with_profile();
+        let mut profile: PlayerProfile = world.read_model(caller);
+        profile.current_prestige = 1;
+        profile.coins = 1000;
+        world.write_model_test(@profile);
 
-        // §7.2 / §7.3: User has coins; purchase kernel 1 (item_type=0, item_id=1)
+        // §7.2 / §7.3: User has coins and prestige 1; purchase kernel 1 (item_type=0, item_id=1, 500 coins)
         let (purchase_addr, _) = world.dns(@"purchase_cosmetic").unwrap();
         let purchase = IPurchaseCosmeticDispatcher { contract_address: purchase_addr };
         purchase.purchase_cosmetic(0, 1);
 
         let profile_after_purchase: PlayerProfile = world.read_model(caller);
-        assert(profile_after_purchase.coins == 99, 'coins after purchase');
+        assert(profile_after_purchase.coins == 500, 'coins after purchase');
         assert(profile_after_purchase.kernel_unlocks == 2, 'kernel 1 unlocked');
         assert(profile_after_purchase.selected_kernel == 1, 'selected kernel 1');
 
@@ -159,7 +172,7 @@ mod tests {
         assert(profile_after_end.lifetime_score == final_score, 'lifetime_score');
         assert(profile_after_end.best_run_score == final_score, 'best_run_score');
         assert(profile_after_end.current_layer == final_layer, 'current_layer');
-        assert(profile_after_end.coins == 99 + 10, 'bonus coins for score >= 1000');
+        assert(profile_after_end.coins == 500 + 10, 'bonus coins for score >= 1000');
 
         // Rank NFT minted (tier = 0*6 + (2-1) = 1)
         assert(profile_after_end.highest_rank_tier_minted == 1, 'rank tier 1 minted');
@@ -214,7 +227,7 @@ mod tests {
         assert(player.run_id.low != 0 || player.run_id.high != 0, 'run_id set');
     }
 
-    /// §7.3: Start run with pregame upgrades (mask 1 bit, cost 1 coin). FE: compute cost, call init_game.
+    /// §7.3: Start run with pregame upgrades (mask bit 0 = Extra Heart, cost 25). FE: compute cost from catalog, call init_game.
     #[test]
     #[available_gas(60000000)]
     fn test_user_journey_start_run_with_pregame_upgrades() {
@@ -224,10 +237,10 @@ mod tests {
         let (init_addr, _) = world.dns(@"init_game").unwrap();
         let init = IInitGameDispatcher { contract_address: init_addr };
         let one_bit_mask = u256 { low: 1, high: 0 };
-        init.init_game(0, one_bit_mask, 1);
+        init.init_game(0, one_bit_mask, 25);
 
         let profile: PlayerProfile = world.read_model(caller);
-        assert(profile.coins == 99, 'one coin spent on upgrade');
+        assert(profile.coins == 75, '25 coins spent on upgrade');
 
         let player: Player = world.read_model(caller);
         let run_state: RunState = world.read_model((caller, player.run_id));
@@ -264,7 +277,7 @@ mod tests {
     }
 
     #[test]
-    #[available_gas(60000000)]
+    #[available_gas(80000000)]
     fn test_end_run_sets_finished_and_locks_final_score() {
         set_block_number(3000);
         let (mut world, caller) = setup_world_with_profile();
@@ -330,6 +343,10 @@ mod tests {
     fn test_purchase_cosmetic_deducts_coins_and_sets_unlock() {
         set_block_number(4100);
         let (mut world, caller) = setup_world_with_profile();
+        let mut profile: PlayerProfile = world.read_model(caller);
+        profile.current_prestige = 1;
+        profile.coins = 1000;
+        world.write_model_test(@profile);
 
         let (addr, _) = world.dns(@"purchase_cosmetic").unwrap();
         let purchase = IPurchaseCosmeticDispatcher { contract_address: addr };
@@ -337,7 +354,7 @@ mod tests {
 
         let profile: PlayerProfile = world.read_model(caller);
         assert(profile.kernel_unlocks == 2, 'kernel 1 unlocked');
-        assert(profile.coins == 99, 'one coin spent');
+        assert(profile.coins == 500, '500 coins spent for kernel 1');
         assert(profile.selected_kernel == 1, 'selected kernel 1');
     }
 
@@ -386,7 +403,7 @@ mod tests {
         let (mut world, _caller) = setup_world_with_profile();
         let (addr, _) = world.dns(@"init_game").unwrap();
         let init = IInitGameDispatcher { contract_address: addr };
-        init.init_game(6, zero_u256(), 0);
+        init.init_game(11, zero_u256(), 0);
     }
 
     #[test]
@@ -413,7 +430,7 @@ mod tests {
         world.write_model_test(@profile);
         let (addr, _) = world.dns(@"init_game").unwrap();
         let init = IInitGameDispatcher { contract_address: addr };
-        init.init_game(0, u256 { low: 1, high: 0 }, 1);
+        init.init_game(0, u256 { low: 1, high: 0 }, 25);
     }
 
     // ---------- Security tests (attack prevention) ----------

@@ -34,6 +34,20 @@ pub mod end_run {
         u256 { low: 0, high: 0 }
     }
 
+    /// 2^n for n in 0..=24 (fits u32). Used for prestige coin reward.
+    fn pow2_u32(n: u32) -> u32 {
+        let mut res: u32 = 1;
+        let mut i: u32 = 0;
+        loop {
+            if i >= n {
+                break;
+            }
+            res = res * 2;
+            i += 1;
+        }
+        res
+    }
+
     /// Unique event_id for game_end (deterministic from run_id and block).
     fn game_end_event_id(run_id: u256, block_number: u64) -> u256 {
         let block_128: u128 = block_number.try_into().unwrap();
@@ -94,6 +108,21 @@ pub mod end_run {
             }
             if final_score >= LEADERBOARD_MIN_SCORE {
                 profile.coins += SCORE_BONUS_COINS;
+            }
+
+            // 5a. Prestige coins: clearing layer 6 awards 2 * 2^current_prestige and advances prestige
+            if final_layer == MAX_LAYER {
+                let prestige_reward = 2 * pow2_u32(run_state.current_prestige.into());
+                profile.coins += prestige_reward;
+                let new_prestige = run_state.current_prestige + 1;
+                profile.current_prestige = new_prestige;
+                if new_prestige > profile.highest_prestige_reached {
+                    profile.highest_prestige_reached = new_prestige;
+                }
+                // Reaching P8 and clearing layer 6 grants Prime Sentinel (required for kernel 10)
+                if run_state.current_prestige == 8 {
+                    profile.is_prime_sentinel = true;
+                }
             }
 
             // 5b. Rank NFT: mint when player reaches a new rank tier (prestige*6 + layer-1)

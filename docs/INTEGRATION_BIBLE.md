@@ -51,6 +51,9 @@ Use these **contract addresses** when calling system entrypoints (e.g. with `acc
 | `neon_sentinel-update_exchange_rate` | `0x76e70704f6cb3ce06e528e1393b6a3407d47ec5502543d453aba2937a12f851` |
 | `neon_sentinel-pause_unpause_purchasing` | `0x159731ccb1308dc67def4d2e61cc47cf926f31a87bd6505f1bf0b80f8095ce4` |
 | `neon_sentinel-purchase_cosmetic` | (see manifest after deploy) |
+| `neon_sentinel-spend_revive` | (see manifest after deploy) |
+| `neon_sentinel-purchase_mini_me_unit` | (see manifest after deploy) |
+| `neon_sentinel-purchase_mini_me_sessions` | (see manifest after deploy) |
 | `neon_sentinel-actions` | `0xe00343a1465ce60216103c8c24a1428aed9ccb6874c2bcfc6226042b050831` |
 
 **Source of truth:** `manifest_sepolia.json` in this repo. Use `contracts[].address` and `contracts[].tag` for each system. After a redeploy, run `sozo -P sepolia build` and use the new manifest; update this table or generate a frontend config from the manifest.
@@ -313,10 +316,30 @@ await account.execute({
 - **Entrypoint:** `purchase_cosmetic`
 - **Calldata:** `[item_type: u8, item_id: u8]`
   - `item_type`: 0 = kernel, 1 = avatar, 2 = skin
-  - `item_id`: bit index 0..63 (kernel 0 is free; kernels 1..5 use item_id 1..5). Cost: 1 coin per item.
+  - `item_id`: for kernel 0..10 (kernel 0 free; 1..10 have price and prestige requirement; kernel 10 also requires Prime Sentinel). See catalog below. Avatar/skin: bit index 0..63, 1 coin each.
 - Deducts coins and sets the corresponding bit in `PlayerProfile.kernel_unlocks`, `avatar_unlocks`, or `cosmetic_unlocks`. For kernel, also sets `selected_kernel`.
 
-### 4.8 buy_coins (STRK → coins)
+### 4.8 spend_revive (in-run revive)
+
+- **Contract address:** `NEON_SENTINEL.SPEND_REVIVE`
+- **Entrypoint:** `spend_revive`
+- **Calldata:** `[run_id_low, run_id_high]`
+- Caller must have an active run with this `run_id`. Cost = **100 × 2^revive_count** (1st revive 100, 2nd 200, 3rd 400, …). Increments `RunState.revive_count` and deducts coins.
+
+### 4.9 purchase_mini_me_unit (Mini-Me inventory)
+
+- **Contract address:** `NEON_SENTINEL.PURCHASE_MINI_ME_UNIT`
+- **Entrypoint:** `purchase_mini_me_unit`
+- **Calldata:** `[unit_type]` (u8, 0..6: Scout, Gunner, Shield, Decoy, Collector, Stun, Healer). Prices: 50, 75, 100, 100, 75, 125, 125. Max 20 units per type. Deducts coins and increments `MiniMeInventory(player, unit_type).count`.
+
+### 4.10 purchase_mini_me_sessions (session pack)
+
+- **Contract address:** `NEON_SENTINEL.PURCHASE_MINI_ME_SESSIONS`
+- **Entrypoint:** `purchase_mini_me_sessions`
+- **Calldata:** `[]`
+- Cost 100 coins. Permanently adds +3 sessions (updates `PlayerProfile.mini_me_sessions_purchased`). Session capacity = 3 + mini_me_sessions_purchased × 3; refill on prestige is client-side.
+
+### 4.11 buy_coins (STRK → coins)
 
 - **Contract address:** `NEON_SENTINEL.BUY_COINS`
 - **Entrypoint:** `buy_coins`
@@ -324,7 +347,19 @@ await account.execute({
   - User must **approve STRK** to the `BUY_COINS` contract first (ERC20 approve).
   - Coins received = amount_strk × exchange_rate (from TokenPurchaseConfig); no slippage parameter.
 
-STRK token address is in **TokenPurchaseConfig** (query via Torii or read from your config if known). The game coin is not a real token; the STRK→coin exchange rate can be set later by the owner via **update_exchange_rate**.
+STRK token address is in **TokenPurchaseConfig** (query via Torii or read from your config if known). The game coin is not a real token; the STRK→coin exchange rate can be set later by the owner via **update_exchange_rate** (rate cap 3..100).
+
+### 4.12 Coins & purchases catalog (frontend reference)
+
+Prices and requirements are fixed in `src/coin_shop_config.cairo`; frontend can mirror for UX.
+
+**Pregame upgrades (bit 0..6):** Extra Heart 25, Double Heart 50, Reinforced Core 40, Overcharged Gun 45, Rapid Fire 40, Extended Boost 35, Agility Pack 30. `expected_cost` in init_game = sum of prices for set bits in mask.
+
+**Kernels (0..10):** 0 free/P0; 1–2: 500/P1; 3–4: 1500/P2; 5: 2000/P3; 6–7: 3000–3500/P4; 8: 4000/P5; 9: 5000/P6; 10: 7500/P8 + Prime Sentinel. Query `PlayerProfile.current_prestige`, `is_prime_sentinel` for eligibility.
+
+**Revive:** cost = 100 × 2^revive_count. Query `RunState.revive_count` for active run.
+
+**Earning:** Daily 3 coins (claim_coins, 7200 blocks); Prime Sentinel 3 coins once per 7200 blocks (claim_coins when is_prime_sentinel); prestige 2×2^prestige when clearing layer 6 (end_run); STRK rate from TokenPurchaseConfig (e.g. 1 STRK = 100 coins).
 
 ---
 
@@ -422,8 +457,9 @@ Use GraphQL subscriptions on the same endpoint to react to entity updates (e.g. 
 | Entity | Key(s) | Use |
 |--------|--------|-----|
 | **Player** | player_address | Active run: run_id, is_active, lives, position, kernel. |
-| **RunState** | player_address, run_id | Score, layer, is_finished, final_score, enemies_defeated, final_layer, submitted_to_leaderboard. |
-| **PlayerProfile** | player_address | Coins, last_coin_claim_block, total_runs, lifetime_score, best_run_score, current_layer, avatar_unlocks, etc. |
+| **RunState** | player_address, run_id | Score, layer, is_finished, final_score, enemies_defeated, final_layer, submitted_to_leaderboard, revive_count, current_prestige, pregame_upgrades_mask. |
+| **PlayerProfile** | player_address | Coins, last_coin_claim_block, current_prestige, is_prime_sentinel, total_runs, lifetime_score, best_run_score, current_layer, kernel_unlocks, selected_kernel, last_prime_sentinel_claim_block, mini_me_sessions_purchased, etc. |
+| **MiniMeInventory** | player_address, unit_type | count (0..20 per type). |
 | **LeaderboardEntry** | entry_id | Leaderboard rows; filter by week, sort by final_score. |
 | **GameEvent** | event_id | game_start (6), game_end (7); filter by run_id / player_address. |
 | **TokenPurchaseConfig** | owner | coin_exchange_rate, strk_token_address (for buy_coins UI). Rate can be set later via update_exchange_rate. |
@@ -514,7 +550,7 @@ Use block number for cooldowns and week; do not rely on client time for game rul
 - [ ] **Chain:** Use Starknet Sepolia; default chain = Sepolia in StarknetConfig.
 - [ ] **Addresses:** Use contract addresses from §2.2 (or import from `manifest_sepolia.json`). World address §2.1 for any world-level reads.
 - [ ] **Torii:** Set GraphQL URL to `https://api.cartridge.gg/x/neon-sentinel-sepolia/torii/graphql`. Use for Player, RunState, PlayerProfile, LeaderboardEntry, TokenPurchaseConfig.
-- [ ] **System calls:** Implement init_game (start_run), end_run, submit_leaderboard, claim_coins, spend_coins, purchase_cosmetic, buy_coins with calldata as in §4. Use u256 as [low, high] where applicable.
+- [ ] **System calls:** Implement init_game (start_run), end_run, submit_leaderboard, claim_coins, spend_coins, purchase_cosmetic, buy_coins, spend_revive, purchase_mini_me_unit, purchase_mini_me_sessions with calldata as in §4. Use u256 as [low, high] where applicable.
 - [ ] **Session policies (optional):** Add game system contracts to Controller session policies for gasless / pre-approved txs.
 - [ ] **Block number:** Use provider for current block when computing week and claim cooldown.
 - [ ] **Errors:** Map revert reasons to UI messages; validate kernel, coins, and run state before calling.

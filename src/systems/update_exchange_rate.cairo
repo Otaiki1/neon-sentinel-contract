@@ -3,7 +3,7 @@
 use starknet::ContractAddress;
 
 const MIN_EXCHANGE_RATE: u32 = 3;
-const MAX_EXCHANGE_RATE: u32 = 10;
+const MAX_EXCHANGE_RATE: u32 = 100;
 /// Max 20% change per update (rate * 20 / 100).
 const MAX_RATE_CHANGE_PERCENT: u32 = 20;
 const ZERO_FELT: felt252 = 0;

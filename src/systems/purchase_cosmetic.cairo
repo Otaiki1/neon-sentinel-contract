@@ -9,10 +9,13 @@ const ITEM_TYPE_SKIN: u8 = 2;
 /// Max item_id (bit index in u64); 0..63.
 const MAX_ITEM_ID: u8 = 63;
 
-/// Kernel 0 is always unlocked; valid kernel indices 0..5.
-const MAX_KERNEL_ID: u8 = 5;
+/// Kernel 0 is always unlocked; valid kernel indices 0..10.
+const MAX_KERNEL_ID: u8 = 10;
 
-/// Coin price per cosmetic (constant for now).
+/// Kernel 10 (Transcendent) requires is_prime_sentinel (P8 L6).
+const KERNEL_10_ID: u8 = 10;
+
+/// Coin price per cosmetic for avatar/skin (non-kernel).
 const COIN_PRICE_PER_COSMETIC: u32 = 1;
 
 #[starknet::interface]
@@ -28,11 +31,71 @@ pub mod purchase_cosmetic {
     use starknet::{ContractAddress, get_caller_address, get_execution_info};
 
     use super::{
-        COIN_PRICE_PER_COSMETIC, ITEM_TYPE_AVATAR, ITEM_TYPE_KERNEL, ITEM_TYPE_SKIN, MAX_ITEM_ID,
-        MAX_KERNEL_ID,
+        COIN_PRICE_PER_COSMETIC, ITEM_TYPE_AVATAR, ITEM_TYPE_KERNEL, ITEM_TYPE_SKIN, KERNEL_10_ID,
+        MAX_ITEM_ID, MAX_KERNEL_ID,
     };
     use super::IPurchaseCosmetic;
+    use neon_sentinel::coin_shop_config::{
+        PRESTIGE_KERNEL_0, PRESTIGE_KERNEL_1, PRESTIGE_KERNEL_2, PRESTIGE_KERNEL_3,
+        PRESTIGE_KERNEL_4, PRESTIGE_KERNEL_5, PRESTIGE_KERNEL_6, PRESTIGE_KERNEL_7,
+        PRESTIGE_KERNEL_8, PRESTIGE_KERNEL_9, PRESTIGE_KERNEL_10,
+        PRICE_KERNEL_0, PRICE_KERNEL_1, PRICE_KERNEL_2, PRICE_KERNEL_3, PRICE_KERNEL_4,
+        PRICE_KERNEL_5, PRICE_KERNEL_6, PRICE_KERNEL_7, PRICE_KERNEL_8, PRICE_KERNEL_9,
+        PRICE_KERNEL_10,
+    };
     use neon_sentinel::models::PlayerProfile;
+
+    fn kernel_price(kernel_id: u8) -> u32 {
+        if kernel_id == 0 {
+            PRICE_KERNEL_0
+        } else if kernel_id == 1 {
+            PRICE_KERNEL_1
+        } else if kernel_id == 2 {
+            PRICE_KERNEL_2
+        } else if kernel_id == 3 {
+            PRICE_KERNEL_3
+        } else if kernel_id == 4 {
+            PRICE_KERNEL_4
+        } else if kernel_id == 5 {
+            PRICE_KERNEL_5
+        } else if kernel_id == 6 {
+            PRICE_KERNEL_6
+        } else if kernel_id == 7 {
+            PRICE_KERNEL_7
+        } else if kernel_id == 8 {
+            PRICE_KERNEL_8
+        } else if kernel_id == 9 {
+            PRICE_KERNEL_9
+        } else {
+            PRICE_KERNEL_10
+        }
+    }
+
+    fn kernel_prestige_required(kernel_id: u8) -> u8 {
+        if kernel_id == 0 {
+            PRESTIGE_KERNEL_0
+        } else if kernel_id == 1 {
+            PRESTIGE_KERNEL_1
+        } else if kernel_id == 2 {
+            PRESTIGE_KERNEL_2
+        } else if kernel_id == 3 {
+            PRESTIGE_KERNEL_3
+        } else if kernel_id == 4 {
+            PRESTIGE_KERNEL_4
+        } else if kernel_id == 5 {
+            PRESTIGE_KERNEL_5
+        } else if kernel_id == 6 {
+            PRESTIGE_KERNEL_6
+        } else if kernel_id == 7 {
+            PRESTIGE_KERNEL_7
+        } else if kernel_id == 8 {
+            PRESTIGE_KERNEL_8
+        } else if kernel_id == 9 {
+            PRESTIGE_KERNEL_9
+        } else {
+            PRESTIGE_KERNEL_10
+        }
+    }
 
     /// 2^n for n in 0..=63 (bit position).
     fn pow2_u64(n: u8) -> u64 {
@@ -88,41 +151,63 @@ pub mod purchase_cosmetic {
                 assert(item_id > 0, 'Kernel 0 is free');
             }
 
-            // 3. Get profile and check sufficient coins
+            // 3. Get profile
             let mut profile: PlayerProfile = world.read_model(caller);
-            assert(profile.coins >= COIN_PRICE_PER_COSMETIC, 'Insufficient coins');
 
             let bit = pow2_u64(item_id);
 
-            // 4. Check not already unlocked and set the correct bitfield
+            // 4. For kernel: prestige, is_prime_sentinel (kernel 10), price, and not already unlocked
             if item_type == ITEM_TYPE_KERNEL {
+                assert(
+                    profile.current_prestige >= kernel_prestige_required(item_id),
+                    'Prestige too low for kernel',
+                );
+                if item_id == KERNEL_10_ID {
+                    assert(profile.is_prime_sentinel, 'Need Prime Sentinel');
+                }
+                let price = kernel_price(item_id);
+                assert(profile.coins >= price, 'Insufficient coins');
                 assert(
                     (profile.kernel_unlocks & bit) == 0,
                     'Kernel already unlocked',
                 );
                 profile.kernel_unlocks = profile.kernel_unlocks + bit;
-            } else if item_type == ITEM_TYPE_AVATAR {
+                profile.coins -= price;
+                profile.coin_transaction_log_hash =
+                    next_coin_log_hash(profile.coin_transaction_log_hash, block_number, price);
+                profile.coin_transaction_count += 1;
+            } else {
+                assert(profile.coins >= COIN_PRICE_PER_COSMETIC, 'Insufficient coins');
+            }
+
+            // 5. Avatar/skin: check not already unlocked and set bitfield; deduct coins
+            if item_type == ITEM_TYPE_AVATAR {
                 assert(
                     (profile.avatar_unlocks & bit) == 0,
                     'Avatar already unlocked',
                 );
                 profile.avatar_unlocks = profile.avatar_unlocks + bit;
-            } else {
+                profile.coins -= COIN_PRICE_PER_COSMETIC;
+                profile.coin_transaction_log_hash = next_coin_log_hash(
+                    profile.coin_transaction_log_hash,
+                    block_number,
+                    COIN_PRICE_PER_COSMETIC,
+                );
+                profile.coin_transaction_count += 1;
+            } else if item_type == ITEM_TYPE_SKIN {
                 assert(
                     (profile.cosmetic_unlocks & bit) == 0,
                     'Skin already unlocked',
                 );
                 profile.cosmetic_unlocks = profile.cosmetic_unlocks + bit;
+                profile.coins -= COIN_PRICE_PER_COSMETIC;
+                profile.coin_transaction_log_hash = next_coin_log_hash(
+                    profile.coin_transaction_log_hash,
+                    block_number,
+                    COIN_PRICE_PER_COSMETIC,
+                );
+                profile.coin_transaction_count += 1;
             }
-
-            // 5. Deduct coins and update coin history
-            profile.coins -= COIN_PRICE_PER_COSMETIC;
-            profile.coin_transaction_log_hash = next_coin_log_hash(
-                profile.coin_transaction_log_hash,
-                block_number,
-                COIN_PRICE_PER_COSMETIC,
-            );
-            profile.coin_transaction_count += 1;
 
             // 6. If kernel, set selected_kernel to the newly purchased one
             if item_type == ITEM_TYPE_KERNEL {
