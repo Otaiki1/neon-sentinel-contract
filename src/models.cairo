@@ -90,6 +90,8 @@ pub struct RunState {
     pub final_score: u64,
     pub final_layer: u8,
     pub submitted_to_leaderboard: bool,
+    /// Attestation: which pregame upgrades were used for this run (set at start_run).
+    pub pregame_upgrades_mask: u256,
 }
 
 /// Enemy instance. SECURITY: position is server-calculated; spawn/destroy use block time;
@@ -218,6 +220,22 @@ pub struct PlayerProfile {
     pub cosmetic_unlocks: u64,
     pub last_profile_update_block: u64,
     pub profile_hash: u256,
+    /// Highest rank tier (prestige*6 + layer-1) for which a RankNFT was minted; avoids duplicate mints.
+    pub highest_rank_tier_minted: u8,
+}
+
+/// Rank achievement NFT (soulbound). Minted when player reaches a new rank tier.
+#[derive(Copy, Drop, Serde, Debug)]
+#[dojo::model]
+pub struct RankNFT {
+    #[key]
+    pub token_id: u256,
+    pub owner: ContractAddress,
+    pub rank_tier: u8,
+    pub prestige: u8,
+    pub layer: u8,
+    pub achieved_at_block: u64,
+    pub run_id: u256,
 }
 
 // ============== Token purchase & treasury models ==============
@@ -551,6 +569,7 @@ mod tests {
             final_score: 0,
             final_layer: 0,
             submitted_to_leaderboard: false,
+            pregame_upgrades_mask: zero_u256(),
         };
         assert(state.run_id.low == 42, 'run_id');
         assert(state.current_layer == 1, 'layer');
@@ -578,6 +597,7 @@ mod tests {
             final_score: 0,
             final_layer: 0,
             submitted_to_leaderboard: false,
+            pregame_upgrades_mask: zero_u256(),
         };
         assert(state.score == 0, 'score');
         assert(state.total_ticks_processed == 0, 'total_ticks');
@@ -610,6 +630,7 @@ mod tests {
             final_score: 0,
             final_layer: 0,
             submitted_to_leaderboard: false,
+            pregame_upgrades_mask: zero_u256(),
         };
         assert(state.is_finished == false, 'is_finished false');
     }

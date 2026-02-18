@@ -1,5 +1,6 @@
-//! init_game system: initializes a new game run with full validation.
-//! Uses block_number + block_timestamp + caller for deterministic seed; locks upgrades.
+//! init_game system (start_run): initializes a new game run with full validation.
+//! Generates a run_id (run hash) from block_number + block_timestamp + caller; validated on end_run.
+//! If called again while a run is active, the previous run is abandoned (overwrite Player + new RunState).
 
 use core::integer::u256;
 
@@ -71,6 +72,20 @@ pub mod init_game {
         pub block_number: u64,
     }
 
+    /// 2^n for n in 0..=63 (used for kernel_unlocks bit check).
+    fn pow2_u64(n: u8) -> u64 {
+        let mut res: u64 = 1;
+        let mut i: u8 = 0;
+        loop {
+            if i >= n {
+                break;
+            }
+            res = res * 2;
+            i += 1;
+        }
+        res
+    }
+
     /// Deterministic seed from block + caller for replay verification.
     fn compute_run_seed(block_number: u64, block_timestamp: u64, _caller: ContractAddress) -> u256 {
         let bn: u128 = block_number.try_into().unwrap();
@@ -115,8 +130,16 @@ pub mod init_game {
             let block_number = exec_info.block_info.block_number;
             let block_timestamp = exec_info.block_info.block_timestamp;
 
-            // 1. Validate kernel (0-5)
+            // 1. Validate kernel (0-5) and that caller owns it (kernel 0 always unlocked)
             assert(kernel <= MAX_KERNEL, 'Invalid kernel');
+            let mut profile: PlayerProfile = world.read_model(caller);
+            if kernel > 0 {
+                let bit = pow2_u64(kernel);
+                assert(
+                    (profile.kernel_unlocks & bit) != 0,
+                    'Kernel not unlocked',
+                );
+            }
 
             // 2. Pregame upgrades within valid range
             assert(
@@ -130,14 +153,13 @@ pub mod init_game {
             assert(computed_cost == expected_cost, 'Cost mismatch');
 
             // 4. Sufficient coins
-            let mut profile: PlayerProfile = world.read_model(caller);
             assert(profile.coins >= expected_cost, 'Insufficient coins');
 
-            // 5. No active run
-            let player_state: Player = world.read_model(caller);
-            assert(!player_state.is_active, 'Active run exists');
+            // 5. No assert on active run: starting again overwrites Player and creates new RunState;
+            //    the previous run is abandoned (never consolidated; end_run for old run_id will fail).
+            let _player_state: Player = world.read_model(caller);
 
-            // 6. Deterministic seed and run_id
+            // 6. Run hash (run_id): deterministic from block + timestamp + caller; validated on end_run.
             let run_id = compute_run_seed(block_number, block_timestamp, caller);
 
             // 7. Create Player entity (all anti-cheat fields)
@@ -162,7 +184,7 @@ pub mod init_game {
             };
             world.write_model(@new_player);
 
-            // 8. Create RunState entity
+            // 8. Create RunState entity (pregame_upgrades_mask attests upgrades used for this run)
             let zero_u256 = u256 { low: 0, high: 0 };
             let run_state = RunState {
                 player_address: caller,
@@ -184,6 +206,7 @@ pub mod init_game {
                 final_score: 0,
                 final_layer: 0,
                 submitted_to_leaderboard: false,
+                pregame_upgrades_mask,
             };
             world.write_model(@run_state);
 

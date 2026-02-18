@@ -94,8 +94,10 @@ chmod +x scripts/deploy_sepolia.sh
 ```bash
 source .env.sepolia
 sozo -P sepolia build
-sozo -P sepolia migrate
+sozo -P sepolia migrate --use-blake2s-casm-class-hash
 ```
+
+**Note:** Sepolia requires the blake2s CASM class hash. Without `--use-blake2s-casm-class-hash` you may see "Mismatch compiled class hash" (Actual vs Expected). The deploy script passes this flag automatically.
 
 Sozo will print something like:
 
@@ -145,19 +147,24 @@ If you are building a client that queries world state or events, run a **Torii**
    slot auth login
    ```
 
-3. **Create a Torii deployment** (replace placeholders):
-   - `<SERVICE_NAME>` — e.g. `neon-sentinel-sepolia` (you own this name once created).
-   - `<DOJO_VERSION>` — Your Dojo version (e.g. `v1.8.0`).
-   - `<WORLD_ADDRESS>` — From `dojo_sepolia.toml` or the migrate output.
-   - `<RPC_URL>` — Your Sepolia RPC URL.
+3. **Create a Torii deployment** — either use the script (reads world and RPC from config) or run the command manually.
 
+   **Option A: Script (recommended)**  
+   Ensure `world_address` is set in `dojo_sepolia.toml` after a successful migrate, then:
    ```bash
-   slot deployments create <SERVICE_NAME> torii --version <DOJO_VERSION> --world <WORLD_ADDRESS> --rpc <RPC_URL>
+   chmod +x scripts/setup_torii_sepolia.sh
+   ./scripts/setup_torii_sepolia.sh
    ```
+   Optional: pass a custom service name: `./scripts/setup_torii_sepolia.sh my-torii-name`.
 
-   Example:
+   **Option B: Manual command** — Slot requires a Torii TOML config file. Create e.g. `torii_sepolia.toml` with:
+   ```toml
+   world_address = "0x_your_world_address"
+   rpc = "https://your-sepolia-rpc-url"
+   ```
+   Then run:
    ```bash
-   slot deployments create neon-sentinel-sepolia torii --version v1.8.0 --world 0x... --rpc https://api.cartridge.gg/x/starknet/sepolia
+   slot deployments create neon-sentinel-sepolia torii --config torii_sepolia.toml --version v1.8.0
    ```
 
 4. Save the endpoints Slot prints; your client will use them for GraphQL/subscriptions.
@@ -223,7 +230,7 @@ Use [Walnut](https://walnut.dev) to inspect transactions on Sepolia (or Mainnet)
 - [ ] `.env.sepolia` created from `.env.sepolia.example` and filled.
 - [ ] `sozo -P sepolia build` and `sozo -P sepolia migrate` run (or `./scripts/deploy_sepolia.sh`).
 - [ ] `world_address` (and optionally `world_block`) set in `dojo_sepolia.toml`.
-- [ ] (Optional) Torii created via Slot for client.
+- [ ] (Optional) Torii indexer: `./scripts/setup_torii_sepolia.sh` (after Slot install + `slot auth login`).
 - [ ] (Optional) Coin shop initialized if using STRK purchases.
 
 For Mainnet, repeat with a mainnet RPC, mainnet account, and profile/mainnet config (e.g. `dojo_mainnet.toml` and a mainnet deploy script).

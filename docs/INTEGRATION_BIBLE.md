@@ -1,273 +1,523 @@
 # Neon Sentinel — Frontend Integration Bible
 
-This guide is for frontend and integration developers: how to call the world, read state, subscribe to events, and implement the main user flows.
+This guide is for frontend developers integrating the Neon Sentinel **Dojo contracts** with the game client using **Cartridge** (Controller wallet, RPC, Torii). It covers: Cartridge + React setup, deployed contract addresses from `manifest_sepolia.json`, system calls (calldata), reading state via Torii GraphQL, and end-to-end flows.
 
 ---
 
 ## 1. Stack Overview
 
-| Component          | Role                                                               |
-| ------------------ | ------------------------------------------------------------------ |
-| **Katana**         | Local Starknet RPC (or use testnet/mainnet)                        |
-| **Sozo**           | Build and migrate the Dojo world; execute system calls             |
-| **Torii**          | Indexer + GraphQL API for querying world state and events          |
-| **World contract** | Dojo world; systems are separate contracts registered in the world |
+| Component | Role |
+| --------- | ----- |
+| **Cartridge Controller** | Smart contract wallet (passkeys, session keys, Paymaster). Users connect via `ControllerConnector` in React. |
+| **Cartridge RPC** | Starknet RPC for Sepolia; used by the app and Controller to send transactions. |
+| **Torii (Cartridge-hosted)** | Indexer + GraphQL API for querying world state (Player, RunState, PlayerProfile, LeaderboardEntry, etc.). |
+| **World contract** | Dojo world on Starknet; systems are separate contracts. You call system **contract addresses** directly. |
 
-The frontend typically:
+**Integration flow:**
 
-1. **Reads state** — Via Torii GraphQL (recommended) or direct RPC calls to the world.
-2. **Writes (transactions)** — Invoke system contracts through the world (Dojo’s `execute` flow) or via your Starknet SDK (starknet.js, etc.) by calling the system’s entrypoints.
-
----
-
-## 2. World and System Addresses
-
-After `sozo migrate`, you get a **world address**. System contracts are registered under that world.
-
-- Get the world address from the migrate output or from your deployment config.
-- Resolve system contract addresses via the world’s DNS/registry (e.g. `world.get_contract_address("neon_sentinel", "init_game")` or your SDK’s equivalent). In Sozo, system names are like `neon_sentinel-init_game`, `neon_sentinel-end_run`, etc. (BALANCED: no execute_tick or hit_registration on-chain.)
-
-For local dev, `dojo_dev.toml` and Torii config use the same world.
+1. **Read state** — Torii GraphQL (queries and subscriptions) for entities and events.
+2. **Writes (transactions)** — Starknet provider (via Cartridge RPC) + player’s account (Controller); invoke system contracts by **contract address** and **entrypoint** with calldata.
 
 ---
 
-## 3. System Calls (Entrypoints)
+## 2. Live Sepolia Deployment
 
-All calls are from the **player’s account** (caller = player address). Names below are logical; your SDK will use the contract ABI and the system’s deployed address.
+All values below come from **`manifest_sepolia.json`** in this repo. Use them for production Sepolia integration.
 
-### 3.1 init_game
+### 2.1 Network and World
 
-Start a new run.
+| Item | Value |
+|------|--------|
+| **Chain** | Starknet Sepolia |
+| **Chain ID** | `SN_SEPOLIA` (e.g. `0x534e5f5345504f4c4941` or your SDK’s constant) |
+| **World address** | `0x4fa7aba1a6f464a1bd73728e1d1c14f60d8099c606ac993d6af27c0ce82e0c1` |
+| **RPC URL (Cartridge)** | `https://api.cartridge.gg/x/starknet/sepolia` |
+| **Torii base URL** | `https://api.cartridge.gg/x/neon-sentinel-sepolia/torii` |
+| **GraphQL endpoint** | `https://api.cartridge.gg/x/neon-sentinel-sepolia/torii/graphql` |
 
-- **Contract:** `neon_sentinel-init_game`
-- **Method:** `init_game(kernel, pregame_upgrades_mask, expected_cost)`
-- **Parameters:**
-    - `kernel`: u8 — Kernel index 0..5
-    - `pregame_upgrades_mask`: u256 — Bitmask of upgrades (low/high 128-bit)
-    - `expected_cost`: u32 — Must equal coin cost of the mask (e.g. popcount × 1 coin per upgrade)
-- **Preconditions:** No active run; sufficient coins if `expected_cost > 0`
-- **Effect:** Creates Player and RunState; deducts coins; emits game_start and (if cost > 0) coin-spend event
+### 2.2 System Contract Addresses (manifest_sepolia.json)
 
-### 3.2 end_run (BALANCED)
+Use these **contract addresses** when calling system entrypoints (e.g. with `account.execute()` or your SDK’s equivalent).
 
-Finish the current run with **client-submitted** final state. Client simulates gameplay locally; chain accepts final score, total kills, and final layer.
+| Tag | Contract address |
+|-----|-------------------|
+| `neon_sentinel-init_game` | `0x23ce7035b962d84a899d463eadddfdee28bf05b9a35fb331b6afc436aab0f6` |
+| `neon_sentinel-end_run` | `0x1fa4bbc70303e98fa88dbcb147571387fd139ca949a126fbf95d57b7e82def7` |
+| `neon_sentinel-submit_leaderboard` | `0x60c1412d8b151fb0e048ecbb9fe6ef098b1d342ea6b5337d1ad159c769c26c2` |
+| `neon_sentinel-claim_coins` | `0x77b6c7ba126988a1109cb0b6188d978a419bd77adcb3278f4b6934f4ae32b7a` |
+| `neon_sentinel-spend_coins` | `0x72f707e406978dbbeb046004325002156afc04a8787ee23d85dc37cffe7e333` |
+| `neon_sentinel-buy_coins` | `0x66c2f66463c5d92b43f6c204e6f3a9cc9b52f411d6cc20d9f2566eb5af27207` |
+| `neon_sentinel-initialize_coin_shop` | `0x2c9a4672b4b373983b261c0cf3bbcd51ef81557ba6f9a6589f9608699f6a2f1` |
+| `neon_sentinel-update_exchange_rate` | `0x76e70704f6cb3ce06e528e1393b6a3407d47ec5502543d453aba2937a12f851` |
+| `neon_sentinel-pause_unpause_purchasing` | `0x159731ccb1308dc67def4d2e61cc47cf926f31a87bd6505f1bf0b80f8095ce4` |
+| `neon_sentinel-purchase_cosmetic` | (see manifest after deploy) |
+| `neon_sentinel-actions` | `0xe00343a1465ce60216103c8c24a1428aed9ccb6874c2bcfc6226042b050831` |
 
-- **Contract:** `neon_sentinel-end_run`
-- **Method:** `end_run(run_id, final_score, total_kills, final_layer)`
-- **Parameters:**
-    - `run_id`: u256 — From current Player.run_id
-    - `final_score`: u64 — Client-submitted run score
-    - `total_kills`: u32 — Client-submitted enemy kill count
-    - `final_layer`: u8 — Client-submitted deepest layer reached
-- **Preconditions:** Caller has active run with that run_id; run not already finished
-- **Effect:** Sets is_finished, final_score, enemies_defeated, final_layer; updates PlayerProfile (total_runs, lifetime_enemies_defeated, lifetime_score, best_run_score, current_layer); awards +10 coins if final_score >= 1000; player inactive; game_end event
-
-### 3.3 submit_leaderboard
-
-Submit a finished run to the weekly leaderboard.
-
-- **Contract:** `neon_sentinel-submit_leaderboard`
-- **Method:** `submit_leaderboard(run_id, week)`
-- **Parameters:**
-    - `run_id`: u256
-    - `week`: u32 — Must equal current week: `floor(block_number / 50400)`
-- **Preconditions:** Run finished; not already submitted; week matches current block-based week
-- **Effect:** Creates LeaderboardEntry (immutable); sets submitted_to_leaderboard
-
-### 3.4 claim_coins
-
-Daily coin claim.
-
-- **Contract:** `neon_sentinel-claim_coins`
-- **Method:** `claim_coins()`
-- **Parameters:** None (caller = player)
-- **Preconditions:** At least 7200 blocks since last claim (or first claim)
-- **Effect:** +3 coins; updates last_coin_claim_block and coin history; emits CoinClaimed
-
-### 3.5 spend_coins
-
-Spend coins (generic; init_game does its own spend for upgrades).
-
-- **Contract:** `neon_sentinel-spend_coins`
-- **Method:** `spend_coins(amount, reason) -> bool`
-- **Parameters:** `amount`: u32, `reason`: felt252 (e.g. string)
-- **Preconditions:** amount > 0; sufficient balance
-- **Effect:** Deducts coins; updates history; emits CoinSpent; returns true
-
-### 3.8 buy_coins (STRK → in-game coins)
-
-Purchase in-game coins with STRK. The coin shop must be initialized (owner calls `initialize_coin_shop`) and the user must approve STRK to the buy_coins contract first.
-
-- **Contract:** `neon_sentinel-buy_coins`
-- **Method:** `buy_coins(amount_strk, max_coins_expected) -> u256` (returns coins received)
-- **Parameters:**
-    - `amount_strk`: u256 — STRK amount (max 1000 per tx)
-    - `max_coins_expected`: u256 — Must equal `amount_strk * exchange_rate` (slippage check); rate is set at init (e.g. 5 coins per STRK)
-- **Preconditions:** Coin shop initialized; not paused; user has approved STRK; sufficient STRK balance; `max_coins_expected == amount_strk * rate`
-- **Effect:** Transfers STRK from caller to contract; adds coins to PlayerProfile; updates coin log hash/count; writes CoinPurchaseRecord, CoinPurchaseHistory; emits CoinsPurchased
-
-**Owner-only (same contract):** `withdraw_strk(amount_strk, notes)`, `request_withdrawal(amount_strk, notes)`, `execute_withdrawal(withdrawal_id)`, `get_treasury_balance()`, `get_treasury_info()`. Other contracts: `neon_sentinel-initialize_coin_shop` (one-time), `neon_sentinel-update_exchange_rate`, `neon_sentinel-pause_unpause_purchasing` (owner only).
+**Source of truth:** `manifest_sepolia.json` in this repo. Use `contracts[].address` and `contracts[].tag` for each system. After a redeploy, run `sozo -P sepolia build` and use the new manifest; update this table or generate a frontend config from the manifest.
 
 ---
 
-## 4. Entities (Models) for Reading State
+## 3. Cartridge + React Setup
 
-Use Torii GraphQL to query these. Entity names and keys follow Dojo conventions (e.g. `neon_sentinel::models::Player` or the names exposed by your Torii schema).
+### 3.1 Packages
 
-### 4.1 Player
+```bash
+pnpm add @cartridge/connector @cartridge/controller @starknet-react/core @starknet-react/chains starknet
+# or
+npm i @cartridge/connector @cartridge/controller @starknet-react/core @starknet-react/chains starknet
+```
 
-- **Key:** `player_address`
-- **Use:** Current run state (position, lives, run_id, is_active, tick_counter, meters). One row per player; if is_active, this is the active run.
+### 3.2 Chain and RPC
 
-### 4.2 RunState
+Use **Sepolia** and Cartridge’s Sepolia RPC so that transactions and Controller use the same chain as the deployed world.
 
-- **Keys:** `player_address`, `run_id`
-- **Use:** Score, layer, combo, ticks, is_finished, final_score, submitted_to_leaderboard. Query by (player, run_id).
+```ts
+import { sepolia } from "@starknet-react/chains";
+import { StarknetConfig, jsonRpcProvider } from "@starknet-react/core";
+import { ControllerConnector } from "@cartridge/connector";
+```
 
-### 4.3 Enemy
+### 3.3 Provider and StarknetConfig
 
-- **Key:** `enemy_id`
-- **Use:** Position, health, is_active, run_id, player_address. Filter by run_id or player for “my run’s enemies”.
+Create the connector **outside** React components (e.g. in a module or root file). Point the RPC to Cartridge Sepolia.
 
-### 4.4 GameTick
+```ts
+// e.g. src/starknet.ts or providers/StarknetProvider.tsx
+import { sepolia } from "@starknet-react/chains";
+import { StarknetConfig, jsonRpcProvider, cartridge } from "@starknet-react/core";
+import { ControllerConnector } from "@cartridge/connector";
 
-- **Keys:** `player_address`, `run_id`, `tick_number`
-- **Use:** Replay, verification; optional for UI (e.g. “tick N” debug).
+const connector = new ControllerConnector({
+  // policies: gamePolicies,  // optional: session policies for gasless txs
+});
 
-### 4.5 GameEvent
+const provider = jsonRpcProvider({
+  rpc: (chain) => {
+    if (chain.id === sepolia.id) {
+      return { nodeUrl: "https://api.cartridge.gg/x/starknet/sepolia" };
+    }
+    return { nodeUrl: "https://api.cartridge.gg/x/starknet/sepolia" }; // or your default
+  },
+});
 
-- **Key:** `event_id`
-- **Use:** Feed of hits, powerups, layer advances, game_start, game_end. Filter by run_id or player_address and optionally event_type (1=hit, 2=powerup, 3=layer, 6=game_start, 7=game_end).
+export function StarknetProvider({ children }: { children: React.ReactNode }) {
+  return (
+    <StarknetConfig
+      chains={[sepolia]}
+      defaultChainId={sepolia.id}
+      provider={provider}
+      connectors={[connector]}
+      explorer={cartridge}
+      autoConnect
+    >
+      {children}
+    </StarknetConfig>
+  );
+}
+```
 
-### 4.6 LeaderboardEntry
+Wrap your app with `StarknetProvider` (e.g. in `main.tsx` or `App.tsx`).
 
-- **Key:** `entry_id`
-- **Use:** Leaderboard list. entry_id is deterministic (e.g. run_id + week). Filter by week or player_address.
+### 3.4 Connect Wallet (useAccount / useConnect)
 
-### 4.7 PlayerProfile
+```ts
+import { useAccount, useConnect, useDisconnect } from "@starknet-react/core";
+import { ControllerConnector } from "@cartridge/connector";
 
-- **Key:** `player_address`
-- **Use:** Coins, last_coin_claim_block (for “next claim in X blocks”), stats, unlocks.
+function ConnectButton() {
+  const { address } = useAccount();
+  const { connect, connectors } = useConnect();
+  const { disconnect } = useDisconnect();
+  const controller = connectors[0] as ControllerConnector;
+
+  if (address) {
+    return (
+      <div>
+        <span>Account: {address}</span>
+        <button onClick={() => disconnect()}>Disconnect</button>
+      </div>
+    );
+  }
+
+  return (
+    <button onClick={() => connect({ connector: controller })}>
+      Connect with Cartridge
+    </button>
+  );
+}
+```
+
+### 3.5 Optional: Session Policies (gasless / pre-approved txs)
+
+To allow gasless or session-based calls to game systems, define policies and pass them into `ControllerConnector`. Use the **system contract addresses** from §2.2.
+
+```ts
+import { SessionPolicies } from "@cartridge/controller";
+
+const INIT_GAME = "0x23ce7035b962d84a899d463eadddfdee28bf05b9a35fb331b6afc436aab0f6";
+const END_RUN = "0x1fa4bbc70303e98fa88dbcb147571387fd139ca949a126fbf95d57b7e82def7";
+const CLAIM_COINS = "0x77b6c7ba126988a1109cb0b6188d978a419bd77adcb3278f4b6934f4ae32b7a";
+const SUBMIT_LEADERBOARD = "0x60c1412d8b151fb0e048ecbb9fe6ef098b1d342ea6b5337d1ad159c769c26c2";
+const SPEND_COINS = "0x72f707e406978dbbeb046004325002156afc04a8787ee23d85dc37cffe7e333";
+const BUY_COINS = "0x66c2f66463c5d92b43f6c204e6f3a9cc9b52f411d6cc20d9f2566eb5af27207";
+
+const gamePolicies: SessionPolicies = {
+  contracts: {
+    [INIT_GAME]: {
+      name: "Neon Sentinel – Start Run",
+      description: "Start a new game run",
+      methods: [{ name: "init_game", entrypoint: "init_game" }],
+    },
+    [END_RUN]: {
+      name: "Neon Sentinel – End Run",
+      description: "Finish run and submit final score",
+      methods: [{ name: "end_run", entrypoint: "end_run" }],
+    },
+    [CLAIM_COINS]: {
+      name: "Neon Sentinel – Claim Coins",
+      description: "Daily coin claim",
+      methods: [{ name: "claim_coins", entrypoint: "claim_coins" }],
+    },
+    [SUBMIT_LEADERBOARD]: {
+      name: "Neon Sentinel – Submit Leaderboard",
+      description: "Submit run to weekly leaderboard",
+      methods: [{ name: "submit_leaderboard", entrypoint: "submit_leaderboard" }],
+    },
+    [SPEND_COINS]: {
+      name: "Neon Sentinel – Spend Coins",
+      description: "Spend in-game coins",
+      methods: [{ name: "spend_coins", entrypoint: "spend_coins" }],
+    },
+    [BUY_COINS]: {
+      name: "Neon Sentinel – Buy Coins",
+      description: "Purchase in-game coins with STRK",
+      methods: [{ name: "buy_coins", entrypoint: "buy_coins" }],
+    },
+  },
+};
+
+const connector = new ControllerConnector({ policies: gamePolicies });
+```
 
 ---
 
-### 4.8 Coin Shop Entities
+## 4. System Calls (Entrypoints and Calldata)
 
-- **CoinShopGlobal** — Singleton (key 0). Use: purchasing_paused, total_strk_collected, total_strk_withdrawn (for treasury info).
-- **TokenPurchaseConfig** — Key: owner. Use: strk_token_address, coin_exchange_rate (for UI: "X coins per STRK").
-- **CoinPurchaseRecord** — Key: purchase_id. Use: per-purchase history (player, strk_amount, coins_minted, block).
-- **CoinPurchaseHistory** — Key: player_address. Use: purchase_count, last_purchase_block per player.
-- **WithdrawalRequest** — Key: withdrawal_id. Use: owner withdrawals (amount, status, blocks).
+All calls are from the **player’s account** (Controller). Use `account.execute([...])` (e.g. from `useAccount()`). Calldata follows Starknet ABI: **u256** = two felts `[low, high]`, **felt252** = short string (e.g. `starknetShortString()` or numeric encoding).
+
+### 4.1 Address constants (from manifest)
+
+```ts
+export const NEON_SENTINEL = {
+  WORLD: "0x4fa7aba1a6f464a1bd73728e1d1c14f60d8099c606ac993d6af27c0ce82e0c1",
+  INIT_GAME: "0x23ce7035b962d84a899d463eadddfdee28bf05b9a35fb331b6afc436aab0f6",
+  END_RUN: "0x1fa4bbc70303e98fa88dbcb147571387fd139ca949a126fbf95d57b7e82def7",
+  SUBMIT_LEADERBOARD: "0x60c1412d8b151fb0e048ecbb9fe6ef098b1d342ea6b5337d1ad159c769c26c2",
+  CLAIM_COINS: "0x77b6c7ba126988a1109cb0b6188d978a419bd77adcb3278f4b6934f4ae32b7a",
+  SPEND_COINS: "0x72f707e406978dbbeb046004325002156afc04a8787ee23d85dc37cffe7e333",
+  BUY_COINS: "0x66c2f66463c5d92b43f6c204e6f3a9cc9b52f411d6cc20d9f2566eb5af27207",
+} as const;
+```
+
+### 4.2 init_game (start_run)
+
+- **Contract address:** `NEON_SENTINEL.INIT_GAME`
+- **Entrypoint:** `init_game`
+- **Calldata:** `[kernel: u8, pregame_upgrades_mask_low: u128, pregame_upgrades_mask_high: u128, expected_cost: u32]`
+  - `kernel`: 0..5; kernel 0 is always allowed; kernels 1..5 must be unlocked (purchased via **purchase_cosmetic**).
+  - `pregame_upgrades_mask`: u256 as two felts (low, high)
+  - `expected_cost`: must equal popcount(mask) × 1 (coin per upgrade)
+- **Run hash (run_id):** The contract generates a deterministic **run_id** (run hash) from block + timestamp + caller. Store it from **Player.run_id** after calling init_game; you must pass this same run_id to **end_run** to consolidate that run. If you call **init_game** again without ending the previous run, the previous run is abandoned (no consolidation); the new run gets a new run_id.
+
+```ts
+// Example: kernel 0, no upgrades, cost 0
+await account.execute({
+  contractAddress: NEON_SENTINEL.INIT_GAME,
+  entrypoint: "init_game",
+  calldata: [
+    0,   // kernel
+    "0x0", "0x0",  // pregame_upgrades_mask low, high
+    0,   // expected_cost
+  ],
+});
+```
+
+### 4.3 end_run (BALANCED)
+
+- **Contract address:** `NEON_SENTINEL.END_RUN`
+- **Entrypoint:** `end_run`
+- **Calldata:** `[run_id_low, run_id_high, final_score: u64, total_kills: u32, final_layer: u8]`
+  - `run_id`: run hash from current `Player.run_id` (u256 = low + high); must match the run you started so the chain can consolidate that run.
+  - `final_score`, `total_kills`, `final_layer`: client-computed from your game. `final_layer` must be 1..6.
+
+```ts
+await account.execute({
+  contractAddress: NEON_SENTINEL.END_RUN,
+  entrypoint: "end_run",
+  calldata: [
+    runId.low, runId.high,
+    finalScore,
+    totalKills,
+    finalLayer,
+  ],
+});
+```
+
+### 4.4 submit_leaderboard
+
+- **Contract address:** `NEON_SENTINEL.SUBMIT_LEADERBOARD`
+- **Entrypoint:** `submit_leaderboard`
+- **Calldata:** `[run_id_low, run_id_high, week: u32]`
+  - `week = floor(block_number / 50400)`; get current block from provider and compute, or query from chain.
+
+```ts
+await account.execute({
+  contractAddress: NEON_SENTINEL.SUBMIT_LEADERBOARD,
+  entrypoint: "submit_leaderboard",
+  calldata: [runId.low, runId.high, currentWeek],
+});
+```
+
+### 4.5 claim_coins
+
+- **Contract address:** `NEON_SENTINEL.CLAIM_COINS`
+- **Entrypoint:** `claim_coins`
+- **Calldata:** none
+
+```ts
+await account.execute({
+  contractAddress: NEON_SENTINEL.CLAIM_COINS,
+  entrypoint: "claim_coins",
+  calldata: [],
+});
+```
+
+### 4.6 spend_coins
+
+- **Contract address:** `NEON_SENTINEL.SPEND_COINS`
+- **Entrypoint:** `spend_coins`
+- **Calldata:** `[amount: u32, reason: felt252]`
+  - `reason`: e.g. short string; encode as felt (or numeric) per your ABI.
+
+```ts
+await account.execute({
+  contractAddress: NEON_SENTINEL.SPEND_COINS,
+  entrypoint: "spend_coins",
+  calldata: [amount, encodeShortString("pregame_upgrades")], // example
+});
+```
+
+### 4.7 purchase_cosmetic
+
+- **Contract address:** `NEON_SENTINEL.PURCHASE_COSMETIC` (from manifest after deploy)
+- **Entrypoint:** `purchase_cosmetic`
+- **Calldata:** `[item_type: u8, item_id: u8]`
+  - `item_type`: 0 = kernel, 1 = avatar, 2 = skin
+  - `item_id`: bit index 0..63 (kernel 0 is free; kernels 1..5 use item_id 1..5). Cost: 1 coin per item.
+- Deducts coins and sets the corresponding bit in `PlayerProfile.kernel_unlocks`, `avatar_unlocks`, or `cosmetic_unlocks`. For kernel, also sets `selected_kernel`.
+
+### 4.8 buy_coins (STRK → coins)
+
+- **Contract address:** `NEON_SENTINEL.BUY_COINS`
+- **Entrypoint:** `buy_coins`
+- **Calldata:** `[amount_strk_low, amount_strk_high, max_coins_expected_low, max_coins_expected_high]`
+  - User must **approve STRK** to the `BUY_COINS` contract first (ERC20 approve).
+  - `max_coins_expected` = amount_strk × exchange_rate (from TokenPurchaseConfig); use for slippage.
+
+STRK token address is in **TokenPurchaseConfig** (query via Torii or read from your config if known). The game coin is not a real token; the STRK→coin exchange rate can be set later by the owner via **update_exchange_rate**.
 
 ---
 
-## 5. Events (Dojo / Starknet)
+## 5. Reading State: Torii GraphQL
 
-Systems emit events for indexing and UI:
+Use the **GraphQL endpoint** for all read state and subscriptions:
 
-- **CoinClaimed** — player, amount (3), block_number (claim_coins)
-- **CoinSpent** — player, amount, reason, block_number (init_game pregame spend, spend_coins)
-- **CoinsPurchased** — player, strk_amount, coins_minted, purchase_id, block_number (buy_coins)
-- **StrkWithdrawn**, **WithdrawalRequestCreated**, **WithdrawalExecuted** — coin shop owner actions
-- **CoinShopInitialized**, **PurchasingPauseToggled**, **ExchangeRateUpdated** — shop config
-- **Moved** — player, direction (starter actions)
-- **GameEvent** — Written as a model (event_id, run_id, event_type, …); subscribe via Torii to model updates or to event_type.
+- **URL:** `https://api.cartridge.gg/x/neon-sentinel-sepolia/torii/graphql`
 
-Use Torii subscriptions or event filters to update the UI when a run advances, a hit is registered, or coins change.
+Torii exposes a schema for Dojo entities (models). Entity names and keys follow the deployed schema (often derived from model names, e.g. `Player`, `RunState`, `PlayerProfile`). Inspect the schema (e.g. via introspection or Torii docs) for exact field and filter names.
+
+### 5.1 Example: PlayerProfile by address
+
+```graphql
+query GetPlayerProfile($address: String!) {
+  playerProfile(where: { player_address: $address }) {
+    player_address
+    coins
+    last_coin_claim_block
+    total_runs
+    lifetime_score
+    best_run_score
+    current_layer
+    selected_kernel
+    avatar_unlocks
+  }
+}
+```
+
+Variables: `{ "address": "0x..." }`
+
+### 5.2 Example: Player (active run) and RunState
+
+```graphql
+query GetPlayerAndRun($address: String!) {
+  player(where: { player_address: $address }) {
+    player_address
+    run_id_low
+    run_id_high
+    is_active
+    x
+    y
+    lives
+    kernel
+  }
+  runStates(where: { player_address: $address }) {
+    run_id_low
+    run_id_high
+    is_finished
+    final_score
+    enemies_defeated
+    final_layer
+    submitted_to_leaderboard
+  }
+}
+```
+
+Use `run_id_low` / `run_id_high` from Player to match the correct RunState row. If your schema uses different key names (e.g. `run_id` as composite), adjust the filter.
+
+### 5.3 Example: Leaderboard by week
+
+```graphql
+query GetLeaderboard($week: Int!) {
+  leaderboardEntries(where: { week: $week }, order: { final_score: "desc" }, limit: 100) {
+    entry_id_low
+    entry_id_high
+    player_address
+    final_score
+    deepest_layer
+    prestige_level
+    survival_blocks
+    enemies_defeated
+  }
+}
+```
+
+Exact field names (e.g. `entry_id_low` vs `entry_id`) depend on the generated Torii schema; use introspection or your deployment’s schema.
+
+### 5.4 Leaderboard ranking and user metrics
+
+**Leaderboard ranking** (general game state): query **LeaderboardEntry** by week, order by `final_score` desc (see §5.3). **User metrics**: query **PlayerProfile** by `player_address` for lifetime_score, best_run_score, current_layer, etc.
+
+### 5.5 Rank NFTs
+
+Query **RankNFT** by `owner` to list a player's rank achievement NFTs (minted at end_run when they reach a new tier): `rankNFTs(where: { owner: $owner }) { token_id_low, token_id_high, rank_tier, prestige, layer, achieved_at_block }`.
+
+### 5.6 Subscriptions
+
+Use GraphQL subscriptions on the same endpoint to react to entity updates (e.g. after `end_run` or `claim_coins`) without polling.
 
 ---
 
-## 6. Torii and GraphQL
+## 6. Entities (Models) Quick Reference
 
-- **Endpoint:** After `torii --world <WORLD_ADDRESS> ...`, Torii exposes HTTP and (if enabled) WebSocket. Default port and routes are in [Torii docs](https://book.dojoengine.org/toolchain/torii/overview).
-- **GraphQL:** Use the generated schema to query entities by keys or filters. Example patterns:
-    - Player by address: `Player { player_address, run_id, is_active, x, y, lives, ... }` where `player_address = "0x..."`
-    - RunState by player and run_id
-    - LeaderboardEntry by week or by player_address
-    - GameEvent by run_id or player_address
-- **Historical / SQL:** Torii can expose SQL for historical data (see `torii_dev.toml`); use for analytics or history views.
+| Entity | Key(s) | Use |
+|--------|--------|-----|
+| **Player** | player_address | Active run: run_id, is_active, lives, position, kernel. |
+| **RunState** | player_address, run_id | Score, layer, is_finished, final_score, enemies_defeated, final_layer, submitted_to_leaderboard. |
+| **PlayerProfile** | player_address | Coins, last_coin_claim_block, total_runs, lifetime_score, best_run_score, current_layer, avatar_unlocks, etc. |
+| **LeaderboardEntry** | entry_id | Leaderboard rows; filter by week, sort by final_score. |
+| **GameEvent** | event_id | game_start (6), game_end (7); filter by run_id / player_address. |
+| **TokenPurchaseConfig** | owner | coin_exchange_rate, strk_token_address (for buy_coins UI). Rate can be set later via update_exchange_rate. |
+| **CoinShopGlobal** | global_key (0) | Shop owner; paused state may be on TokenPurchaseConfig. |
+| **RankNFT** | token_id | Rank achievement NFTs (owner, rank_tier, prestige, layer, achieved_at_block, run_id). |
+
+Torii model tags in the manifest follow `neon_sentinel-<ModelName>` (e.g. `neon_sentinel-PlayerProfile`). The GraphQL schema may expose them as camelCase or with different key names; always check the live schema.
 
 ---
 
 ## 7. Recommended Frontend Flows
 
+The integration tests in **`src/tests/test_systems_integration.cairo`** mirror these flows and serve as a contract-level guide: see `test_user_journey_*` for full journey (claim coins → purchase cosmetic → start run → end run → submit leaderboard), and single-flow tests for each step.
+
 ### 7.1 Load player state
 
-1. Query **PlayerProfile** by player address (coins, last_coin_claim_block).
-2. Query **Player** by player address. If `is_active`, you have an active run: use `run_id`, position, lives, etc.
-3. If active, query **RunState** by (player_address, run_id) for score, layer, combo, is_finished.
+1. Ensure chain is Sepolia and user is connected (Controller).
+2. Query Torii: **PlayerProfile** and **Player** by `player_address`.
+3. If **Player.is_active**, query **RunState** for that `run_id` (use run_id from Player).
 
-### 7.2 Get more coins (claim or buy)
+### 7.2 Claim or buy coins
 
-- **Claim:** If 24h passed (last_coin_claim_block + 7200 ≤ current block), call **claim_coins**().
-- **Buy with STRK:** If coin shop is initialized and not paused: approve STRK to the buy_coins contract, then call **buy_coins**(amount_strk, amount_strk * rate). Rate is from TokenPurchaseConfig (e.g. 5). Max 1000 STRK per tx.
+- **Claim:** If `block_number - last_coin_claim_block >= 7200` (or first claim), call **claim_coins** (no calldata). Get block number from provider.
+- **Buy with STRK:** Approve STRK to `NEON_SENTINEL.BUY_COINS`, then call **buy_coins**(amount_strk, max_coins_expected). Use **TokenPurchaseConfig** for exchange_rate.
 
-### 7.3 Start a run
+### 7.3 Start a run (init_game)
 
-1. Ensure no active run (Player.is_active == false).
-2. Optionally **claim_coins** or **buy_coins** if the player needs more coins.
-3. Compute upgrade cost (e.g. popcount of upgrade mask × 1); ensure profile.coins >= cost.
-4. Call **init_game**(kernel, pregame_upgrades_mask, expected_cost).
-5. Refresh Player and RunState; show run UI.
+1. Ensure **PlayerProfile.coins** ≥ upgrade cost; **kernel** must be 0 or an unlocked kernel (see **purchase_cosmetic**).
+2. Call **init_game**(kernel, pregame_upgrades_mask, expected_cost). If the player already had an active run, that run is abandoned (no consolidation); a new run_id is generated.
+3. Read **Player.run_id** (run hash) and **RunState** from Torii; use this run_id when calling **end_run**.
+4. Refresh Player and RunState from Torii.
 
-### 7.4 Gameplay (client-side, BALANCED)
+### 7.4 Gameplay (client-side)
 
-1. Simulate the run locally: movement, collisions, hits, score, kills, layer.
-2. When the run ends (player quits or game over), compute final_score, total_kills, final_layer from your simulation.
+Simulate run locally; on game over compute `final_score`, `total_kills`, `final_layer`.
 
 ### 7.5 End run and submit to leaderboard
 
-1. Call **end_run**(run_id, final_score, total_kills, final_layer) with the client-computed values. Refresh Player (is_active false), RunState (is_finished, final_score, enemies_defeated, final_layer), and PlayerProfile (total_runs, lifetime stats, bonus coins if score >= 1000).
-2. Compute current week: `week = floor(block_number / 50400)`.
-3. Call **submit_leaderboard**(run_id, week). Refresh RunState (submitted_to_leaderboard) and LeaderboardEntry list.
+1. Call **end_run**(run_id, final_score, total_kills, final_layer).
+2. After confirmation, compute `week = floor(block_number / 50400)` and call **submit_leaderboard**(run_id, week).
+3. Refresh Player, RunState, PlayerProfile, and leaderboard from Torii.
 
-### 7.7 Leaderboard view
+### 7.6 Leaderboard view
 
-1. Query **LeaderboardEntry** filtered by week (and optionally order by final_score).
-2. Display entry_id, player_address, final_score, deepest_layer, survival_blocks, verified, etc.
+Query **LeaderboardEntry** by week, order by final_score; display in your Hall of Fame UI.
 
 ---
 
 ## 8. Errors and Validation
 
-- **Invalid kernel** — kernel must be 0..5.
-- **Insufficient coins** — Profile.coins < expected_cost or spend amount.
-- **Active run exists** — Cannot init_game while Player.is_active.
-- **Run not active** / **Run id mismatch** — end_run with wrong or inactive run.
-- **Already finished** — end_run called twice for same run.
-- **Already submitted** — submit_leaderboard called twice for same run.
-- **Week mismatch** — submit_leaderboard week ≠ current_leaderboard_week(block).
-- **Too soon to claim** — claim_coins before 7200 blocks since last claim.
-- **Purchasing paused** — buy_coins when shop is paused.
-- **Approve STRK first** / **Insufficient STRK balance** / **Expected coins mismatch** — buy_coins validation failures.
+Map contract reverts to user-facing messages:
 
-Map these to user-facing messages and disable/validate UI (e.g. “Wait X blocks to claim”, “Finish current run first”).
+| Revert / condition | Message / handling |
+|--------------------|--------------------|
+| Invalid kernel | "Kernel must be 0–5." |
+| Kernel not unlocked | "Purchase this kernel with coins first (purchase_cosmetic)." |
+| Insufficient coins | "Not enough coins." |
+| Run not active / Run id mismatch | "No active run or wrong run. Use current Player.run_id." |
+| Already finished | "Run already ended." |
+| Already submitted | "Already submitted to leaderboard." |
+| Week mismatch | "Submit in the correct leaderboard week." |
+| Too soon to claim | "Next claim in X blocks." |
+| Purchasing paused | "Coin shop is paused." |
+| Expected coins mismatch / STRK | "Slippage or STRK approval issue." |
+
+Use block number for cooldowns and week; do not rely on client time for game rules.
 
 ---
 
 ## 9. Numbers Quick Reference
 
-| Concept                         | Value             |
-| ------------------------------- | ----------------- |
-| Coins per daily claim           | 3                 |
-| Blocks per day (claim cooldown) | 7200              |
-| Blocks per week (leaderboard)   | 50400             |
-| Max hit distance                | 50 (squared 2500) |
-| Kernel range                    | 0..5              |
-| Starting lives / max lives      | 3 / 20            |
-| Combo 1.0x                      | 1000 (basis)      |
-| Max layer                       | 6                 |
+| Concept | Value |
+|--------|--------|
+| Coins per daily claim | 3 |
+| Blocks per day (claim cooldown) | 7200 |
+| Blocks per week (leaderboard) | 50400 |
+| Kernel range | 0..5 |
+| Starting lives / max lives | 3 / 20 |
+| Combo 1.0x (basis) | 1000 |
+| Max layer | 6 |
+| Bonus coins when final_score ≥ 1000 | 10 |
 
 ---
 
-## 10. Checklist for Integration
+## 10. Integration Checklist
 
-- [ ] Resolve world and system addresses (from migrate or config).
-- [ ] Use Torii GraphQL (or RPC) to load Player, RunState, PlayerProfile, Enemies, LeaderboardEntry.
-- [ ] Implement init_game, end_run(run_id, final_score, total_kills, final_layer), submit_leaderboard, claim_coins, buy_coins (and spend_coins if needed). Simulate gameplay client-side and call end_run with final state.
-- [ ] Use block number for cooldowns and week; do not rely on client time for game rules.
-- [ ] Handle revert reasons and show clear errors.
-- [ ] Subscribe to events or poll state after transactions for a responsive UI.
-- [ ] For leaderboard, query by week and sort by final_score; show verified/replay_verifiable if desired.
+- [ ] **Cartridge + React:** Install `@cartridge/connector`, `@cartridge/controller`, `@starknet-react/core`, `@starknet-react/chains`, `starknet`. Create connector and `StarknetConfig` with Cartridge Sepolia RPC and ControllerConnector.
+- [ ] **Chain:** Use Starknet Sepolia; default chain = Sepolia in StarknetConfig.
+- [ ] **Addresses:** Use contract addresses from §2.2 (or import from `manifest_sepolia.json`). World address §2.1 for any world-level reads.
+- [ ] **Torii:** Set GraphQL URL to `https://api.cartridge.gg/x/neon-sentinel-sepolia/torii/graphql`. Use for Player, RunState, PlayerProfile, LeaderboardEntry, TokenPurchaseConfig.
+- [ ] **System calls:** Implement init_game (start_run), end_run, submit_leaderboard, claim_coins, spend_coins, purchase_cosmetic, buy_coins with calldata as in §4. Use u256 as [low, high] where applicable.
+- [ ] **Session policies (optional):** Add game system contracts to Controller session policies for gasless / pre-approved txs.
+- [ ] **Block number:** Use provider for current block when computing week and claim cooldown.
+- [ ] **Errors:** Map revert reasons to UI messages; validate kernel, coins, and run state before calling.
+- [ ] **Refresh after tx:** After each write, refetch or subscribe to Torii so UI shows updated state.
 
-This integration bible should be updated when new systems, entities, or events are added.
+When the deployment or manifest changes, update §2 (addresses and URLs) and your frontend config accordingly.

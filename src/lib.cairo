@@ -6,6 +6,7 @@ pub mod systems {
     pub mod init_game;
     pub mod initialize_coin_shop;
     pub mod pause_unpause_purchasing;
+    pub mod purchase_cosmetic;
     pub mod spend_coins;
     pub mod submit_leaderboard;
     pub mod update_exchange_rate;

@@ -7,6 +7,7 @@ use core::integer::u256;
 const EVENT_TYPE_GAME_END: u8 = 7;
 const LEADERBOARD_MIN_SCORE: u64 = 1000;
 const SCORE_BONUS_COINS: u32 = 10;
+const MAX_LAYER: u8 = 6;
 
 #[starknet::interface]
 pub trait IEndRun<T> {
@@ -25,9 +26,9 @@ pub mod end_run {
     use dojo::model::ModelStorage;
     use starknet::{get_caller_address, get_execution_info};
 
-    use super::{EVENT_TYPE_GAME_END, LEADERBOARD_MIN_SCORE, SCORE_BONUS_COINS};
+    use super::{EVENT_TYPE_GAME_END, LEADERBOARD_MIN_SCORE, MAX_LAYER, SCORE_BONUS_COINS};
     use super::IEndRun;
-    use neon_sentinel::models::{GameEvent, Player, PlayerProfile, RunState};
+    use neon_sentinel::models::{GameEvent, Player, PlayerProfile, RankNFT, RunState};
 
     fn zero_u256() -> u256 {
         u256 { low: 0, high: 0 }
@@ -64,9 +65,10 @@ pub mod end_run {
                 'Run id mismatch',
             );
 
-            // 2. Check run is not already finished
+            // 2. Check run is not already finished; validate final_layer range
             let mut run_state: RunState = world.read_model((caller, run_id));
             assert(!run_state.is_finished, 'Already finished');
+            assert(final_layer >= 1 && final_layer <= MAX_LAYER, 'Invalid layer');
 
             // 3. Accept client-submitted final state
             run_state.is_finished = true;
@@ -92,6 +94,28 @@ pub mod end_run {
             }
             if final_score >= LEADERBOARD_MIN_SCORE {
                 profile.coins += SCORE_BONUS_COINS;
+            }
+
+            // 5b. Rank NFT: mint when player reaches a new rank tier (prestige*6 + layer-1)
+            let tier: u8 = run_state.current_prestige * 6 + (final_layer - 1);
+            if tier > profile.highest_rank_tier_minted {
+                let block_128: u128 = block_number.try_into().unwrap();
+                let tier_128: u128 = tier.into();
+                let token_id = u256 {
+                    low: run_id.low + block_128,
+                    high: run_id.high + tier_128,
+                };
+                let rank_nft = RankNFT {
+                    token_id,
+                    owner: caller,
+                    rank_tier: tier,
+                    prestige: run_state.current_prestige,
+                    layer: final_layer,
+                    achieved_at_block: block_number,
+                    run_id,
+                };
+                world.write_model(@rank_nft);
+                profile.highest_rank_tier_minted = tier;
             }
 
             // 6. Emit GameEvent for game over

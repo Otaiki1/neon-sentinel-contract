@@ -102,6 +102,7 @@ mod tests {
             cosmetic_unlocks: 0,
             last_profile_update_block: 0,
             profile_hash: zero_u256(),
+            highest_rank_tier_minted: 0,
         };
         world.write_model_test(@profile);
 

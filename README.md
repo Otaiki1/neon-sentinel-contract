@@ -2,7 +2,7 @@
 
 ![Neon Sentinel](./assets/cover.png)
 
-**Neon Sentinel** is a Dojo Autonomous World — a provable, on-chain game and world logic running on Starknet. The world is the source of truth: runs are deterministic, replay-verifiable, and leaderboard entries are immutable once submitted.
+**Neon Sentinel** is a Dojo Autonomous World — a provable, on-chain game and world logic running on Starknet. The world is the source of truth: run state is recorded on-chain, leaderboard entries are immutable once submitted, and (BALANCED) final score/kills/layer are submitted by the client.
 
 [![discord](https://img.shields.io/badge/join-dojo-green?logo=discord&logoColor=white)](https://discord.com/invite/dojoengine)
 [![Telegram Chat][tg-badge]][tg-url]
@@ -105,6 +105,8 @@ neon-sentinel-dojo/
 └── docs/
     ├── DEVELOPERS_BIBLE.md    # Deep dive into code and architecture
     ├── INTEGRATION_BIBLE.md   # Frontend integration guide
+    ├── DOJO_REVIEW.md         # Dojo best-practices review checklist
+    ├── ONCHAIN_READINESS.md    # Frontend→chain gap analysis (inventory, settings, avatars)
     ├── MANUAL_TESTING_STRK.md   # STRK coin purchase manual test checklist
     ├── SECURITY_REVIEW_STRK.md   # Security review checklist (coin shop)
     └── DEPLOY_TESTNET.md        # Deploy world to Sepolia testnet
@@ -152,6 +154,8 @@ docker compose up
 
 ---
 
+For **production (Sepolia)** world address and Torii/GraphQL URLs, see [INTEGRATION_BIBLE.md](docs/INTEGRATION_BIBLE.md).
+
 ## Documentation
 
 | Document                                                | Description                                                             |
@@ -161,6 +165,8 @@ docker compose up
 | [MANUAL_TESTING_STRK.md](docs/MANUAL_TESTING_STRK.md)   | Manual testing checklist for STRK → in-game coins flow.                 |
 | [SECURITY_REVIEW_STRK.md](docs/SECURITY_REVIEW_STRK.md) | Security review checklist for the coin shop (STRK purchase) system.     |
 | [DEPLOY_TESTNET.md](docs/DEPLOY_TESTNET.md)           | Step-by-step guide to deploy the world to Starknet Sepolia testnet.    |
+| [DOJO_REVIEW.md](docs/DOJO_REVIEW.md)                 | Dojo best-practices review checklist and findings.                     |
+| [ONCHAIN_READINESS.md](docs/ONCHAIN_READINESS.md)     | Gap analysis: frontend → chain (inventory, settings, avatars, what’s missing). |
 
 ---
 

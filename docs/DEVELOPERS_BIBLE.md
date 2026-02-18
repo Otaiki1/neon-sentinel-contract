@@ -34,6 +34,7 @@ flowchart LR
     ICS[initialize_coin_shop]
     UER[update_exchange_rate]
     PUP[pause_unpause_purchasing]
+    PC[purchase_cosmetic]
     ACT[actions]
   end
   systems -->|read/write| NS
@@ -41,7 +42,7 @@ flowchart LR
 ```
 
 - **Namespace:** `neon_sentinel`. All game models and permitted writers are scoped to this namespace.
-- **Writers (BALANCED):** Only the following system contracts may write to `neon_sentinel`: `actions`, `init_game`, `end_run`, `submit_leaderboard`, `claim_coins`, `spend_coins`, `buy_coins`, `initialize_coin_shop`, `update_exchange_rate`, `pause_unpause_purchasing`. Gameplay (ticks, hits) is client-side; chain accepts final state via `end_run`. Enforced by Dojo at the world level.
+- **Writers (BALANCED):** Only the following system contracts may write to `neon_sentinel`: `actions`, `init_game`, `end_run`, `submit_leaderboard`, `claim_coins`, `spend_coins`, `purchase_cosmetic`, `buy_coins`, `initialize_coin_shop`, `update_exchange_rate`, `pause_unpause_purchasing`. Gameplay (ticks, hits) is client-side; chain accepts final state via `end_run`. Calling init_game again abandons the previous run (new run_id); end_run validates run_id and consolidates. Rank NFTs are minted in end_run when the player reaches a new rank tier. Enforced by Dojo at the world level.
 - **Storage:** Models are stored under their composite key (e.g. `(player_address)` for Player, `(player_address, run_id)` for RunState). No system can write a model it does not have permission for; clients cannot write directly.
 
 ### 1.2 Execution and Timing
@@ -183,8 +184,8 @@ Every model is a `#[dojo::model]` struct. Keys are marked with `#[key]` and uniq
 | combo_before, combo_after                       | u32                        | Combo around this tick.                   |
 | state_hash_before, state_hash_after, tick_hash  | u256                       | For replay and verification.              |
 
-**Writers (BALANCED):** Optional; not written by core systems (client simulates).  
-**Invariants:** tick_number is sequential; submit_leaderboard may require the last tick to exist for replay_verifiable.
+**Writers (BALANCED):** Not written by core systems (client simulates).  
+**Invariants:** tick_number is sequential. In BALANCED, total_ticks_processed stays 0, so submit_leaderboard does not read GameTick (replay_verifiable remains false).
 
 ### 3.5 GameEvent
 
@@ -240,8 +241,8 @@ Every model is a `#[dojo::model]` struct. Keys are marked with `#[key]` and uniq
 
 ### 3.8 Coin Shop Models
 
-- **CoinShopGlobal** — Singleton (key = 0): owner, purchasing_paused, total_strk_collected, total_strk_withdrawn, etc. Writers: initialize_coin_shop (create), buy_coins (totals), update_exchange_rate, pause_unpause_purchasing, buy_coins (withdrawals).
-- **TokenPurchaseConfig** — Key: owner (ContractAddress). Holds strk_token_address, coin_exchange_rate. Writers: initialize_coin_shop (one-time), update_exchange_rate (rate only).
+- **CoinShopGlobal** — Singleton (key = 0): global_key, owner only. Used to resolve the owner so systems can read TokenPurchaseConfig by owner. Writers: initialize_coin_shop (create).
+- **TokenPurchaseConfig** — Key: owner (ContractAddress). Holds strk_token_address, coin_exchange_rate, total_strk_collected, total_strk_withdrawn, total_coins_sold, paused, last_updated, next_withdrawal_id, etc. Writers: initialize_coin_shop (one-time), update_exchange_rate (rate only), pause_unpause_purchasing (paused), buy_coins (totals, withdrawals).
 - **CoinPurchaseRecord** — Per-purchase record (purchase_id, player, strk_amount, coins_minted, block, etc.). Writer: buy_coins.
 - **CoinPurchaseHistory** — Per-player aggregate (player_address, purchase_count, last_purchase_block, etc.). Writer: buy_coins.
 - **WithdrawalRequest** — Per-withdrawal (withdrawal_id, amount, status: pending/executed, blocks). Writers: buy_coins (request_withdrawal, execute_withdrawal, withdraw_strk).
@@ -270,7 +271,7 @@ Every model is a `#[dojo::model]` struct. Keys are marked with `#[key]` and uniq
 
 - **Purpose:** Record the finished run on the weekly leaderboard with proof fields; one submission per run.
 - **Week:** `current_leaderboard_week(block_number) = block_number / BLOCKS_PER_WEEK` (50400). Client must pass this value; contract asserts week == current_leaderboard_week(block_number).
-- **Replay check:** If total_ticks_processed > 0, reads GameTick for (caller, run_id, total_ticks_processed) to ensure the tick chain exists; sets replay_verifiable = true.
+- **Replay check:** If total_ticks_processed > 0, reads GameTick for (caller, run_id, total_ticks_processed) to ensure the tick chain exists; sets replay_verifiable = true. **BALANCED:** total_ticks_processed is not updated on-chain (remains 0 from init_game), so replay_verifiable is false and GameTick is never read.
 - **entry_id:** `entry_id_for_run_week(run_id, week)` = u256 { low: run_id.low + week, high: run_id.high }.
 - **submission_hash:** Same as state_hash_for_run(run_state). game_seed = run_id. event_log_hash is placeholder (zero) until incremental event hashing is added.
 
@@ -299,7 +300,12 @@ Every model is a `#[dojo::model]` struct. Keys are marked with `#[key]` and uniq
 
 ### 4.9 pause_unpause_purchasing
 
-- **Purpose:** Owner-only. Toggles CoinShopGlobal.purchasing_paused. When paused, buy_coins reverts. Emits PurchasingPauseToggled.
+- **Purpose:** Owner-only. Toggles TokenPurchaseConfig.paused. When paused, buy_coins reverts. Emits PurchasingPauseToggled.
+
+### 4.10 actions
+
+- **Purpose:** Starter spawn/move for Position and Moves (demo flow). spawn: sets Position (+10, +10) and Moves (remaining 100). move: decrements remaining moves, updates position by direction, emits Moved.
+- **Safety:** move() asserts `moves.remaining > 0` before decrement to avoid underflow. next_position() only decrements x (Left) or y (Up) when value > 0 to avoid underflow at origin.
 
 ---
 
@@ -429,7 +435,7 @@ src/tests/
 
 - Create a new contract under `systems/` with its interface and implementation; use `self.world(@"neon_sentinel")` for storage.
 - Register the module in `lib.cairo`.
-- Add the contract to the `neon_sentinel` writers in `dojo_dev.toml` and `dojo_release.toml`.
+- Add the contract to the `neon_sentinel` writers in `dojo_dev.toml`, `dojo_release.toml`, and (for testnet) `dojo_sepolia.toml`.
 - If it emits events, add `TestResource::Event(your_module::e_YourEvent::TEST_CLASS_HASH)` and the contract to the integration test namespace and contract_defs.
 
 ### 8.4 Dependencies and Versions
