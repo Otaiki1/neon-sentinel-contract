@@ -4,6 +4,17 @@ Step-by-step guide to deploy the Neon Sentinel Dojo world to **Starknet Sepolia*
 
 ---
 
+## Redeploy vs fresh deploy
+
+| Scenario | `world_address` in `dojo_sepolia.toml` | What happens |
+|----------|----------------------------------------|---------------|
+| **Fresh deploy** | Set to `"0"` | Sozo deploys a new world and all systems. After migrate, set `world_address` to the printed address. |
+| **Redeploy (upgrade)** | Set to the **existing world address** (e.g. current Sepolia world) | Sozo migrates/upgrades the existing world: declares new/changed classes, updates world state. Same world address; new code. |
+
+For the **redeploy** we do after code changes (e.g. rank system, leaderboard week, new systems): keep `world_address` as the existing world so migrate upgrades it. Do not set it to `"0"` or you will deploy a second world.
+
+---
+
 ## 1. Prerequisites
 
 - [Dojo / Sozo](https://book.dojoengine.org/getting-started/installation) installed.
@@ -45,9 +56,11 @@ Output must be **SN_SEPOLIA** (or **SN_MAIN** for mainnet).
 The repo is already set up for Sepolia:
 
 - **Scarb:** `[profile.sepolia]` is declared in `Scarb.toml`.
-- **Dojo:** `dojo_sepolia.toml` exists with the same world/namespace/writers as dev; only `[env]` differs (RPC, account, and key come from environment). For the **first deploy**, `world_address` must be `"0"` (not empty); after migrate, set it to the printed world address.
+- **Dojo:** `dojo_sepolia.toml` exists with the same world/namespace/writers as dev; only `[env]` differs (RPC, account, and key come from environment).
+  - **Fresh deploy:** Set `world_address = "0"` in `[env]`. After the first successful migrate, set it to the printed world address.
+  - **Redeploy (upgrade):** Set `world_address` to the **existing** world address so Sozo upgrades that world instead of creating a new one.
 
-If you deploy a **different** world (e.g. your own fork), change the `seed` in `dojo_sepolia.toml` so the world address is unique.
+If you deploy a **new** world from scratch (e.g. your own fork), change the `seed` in `dojo_sepolia.toml` so the world address is unique, and keep `world_address = "0"`.
 
 ---
 
@@ -82,7 +95,11 @@ Ensure the account is **deployed** on Sepolia and has ETH for gas.
 
 ### Option A: Using the deployment script (recommended)
 
-The script loads `.env.sepolia`, builds with the Sepolia profile, runs migration, and clears env vars on exit:
+The script loads `.env.sepolia`, cleans and builds with the Sepolia profile, runs migration, and (if configured) initializes or updates the coin shop. Clears env vars on exit.
+
+**Before running:**
+- **Redeploy:** Ensure `world_address` in `dojo_sepolia.toml` is the **existing** world address (so migrate upgrades it).
+- **Fresh deploy:** Set `world_address = "0"`, then after success set it to the printed address.
 
 ```bash
 chmod +x scripts/deploy_sepolia.sh
@@ -112,17 +129,17 @@ Sozo will print something like:
 
 Copy the **world address** and (optionally) the **block number** for the next step.
 
-**If you see `failed to create Felt from string: invalid dec string`:** ensure `world_address` in `dojo_sepolia.toml` is `"0"` for the first deploy (not an empty string `""`).
+**If you see `failed to create Felt from string: invalid dec string`:** ensure `world_address` in `dojo_sepolia.toml` is `"0"` for a fresh deploy (not an empty string `""`).
 
-**If you see "world address ... refers to a deployed world":** the seed already has a world on this chain. Either **upgrade it** by setting `world_address` in `dojo_sepolia.toml` to the address Sozo prints, or **deploy a new world** by changing `seed` to something unique and keeping `world_address = "0"`.
+**If you see "world address ... refers to a deployed world":** Sozo is upgrading that world. For a **new** world instead, change `seed` in `dojo_sepolia.toml` and set `world_address = "0"`.
 
-**If you see "Mismatch compiled class hash":** (1) Ensure `sierra-replace-ids = false` in `Scarb.toml` under `[cairo]` so class hashes are deterministic. (2) If the world was already deployed but "Declare N classes" failed, set `world_address` in `dojo_sepolia.toml` to the printed world address and run migrate again. (3) If the existing world was built with different code/tooling, deploy a new world with a unique seed and `world_address = "0"`.
+**If you see "Mismatch compiled class hash":** (1) Ensure `sierra-replace-ids = false` in `Scarb.toml` under `[cairo]`. (2) For redeploy, ensure `world_address` is the existing world and run migrate again. (3) If the existing world was built with different tooling, deploy a new world (new `seed`, `world_address = "0"`).
 
 ---
 
-## 6. Update Config After First Deploy
+## 6. Update Config After First Deploy (fresh deploy only)
 
-After the first successful deploy, set the world address (and optionally the block) in `dojo_sepolia.toml` so later commands and Torii use the correct world:
+After the **first** successful deploy (new world), set the world address (and optionally the block) in `dojo_sepolia.toml` so later commands and Torii use the correct world:
 
 ```toml
 [env]
@@ -130,6 +147,8 @@ After the first successful deploy, set the world address (and optionally the blo
 world_address = "0x_your_world_address_from_migrate_output"
 world_block = 123456   # optional: block where world was deployed
 ```
+
+For **redeploys**, leave `world_address` as the existing world; no change needed unless you deployed a new world with a new seed.
 
 ---
 
@@ -169,11 +188,12 @@ If you are building a client that queries world state or events, run a **Torii**
 
 4. Save the endpoints Slot prints; your client will use them for GraphQL/subscriptions.
 
-5. To recreate Torii later (safe; data is on-chain):
+5. **After a redeploy:** If you upgraded the world (new models or schema), recreate the Torii deployment so the indexer uses the new schema:
    ```bash
    slot deployments delete <SERVICE_NAME> torii
-   slot deployments create <SERVICE_NAME> torii ...
+   ./scripts/setup_torii_sepolia.sh [SERVICE_NAME]
    ```
+   If the schema did not change, the existing Torii may continue to work (it indexes from chain).
 
 ---
 
@@ -199,9 +219,11 @@ If you use the STRK → in-game coins flow:
    ```bash
    sozo -P sepolia execute neon_sentinel-initialize_coin_shop initialize_coin_shop <STRK_TOKEN_ADDRESS> <EXCHANGE_RATE>
    ```
-   Exchange rate must be between 3 and 10 (e.g. 5 = 5 coins per STRK).
+   Exchange rate must be between **3 and 100** (coins per STRK; e.g. 10 = 10 coins per 1 STRK).
 
 3. After that, players can `approve` STRK to the `buy_coins` contract and call `buy_coins(amount_strk)` (coins = amount_strk × exchange_rate).
+
+The deploy script can initialize the shop automatically if `STRK_TOKEN_ADDRESS` is set in `.env.sepolia`; otherwise it only calls `update_exchange_rate` if the shop already exists.
 
 See [MANUAL_TESTING_STRK.md](MANUAL_TESTING_STRK.md) for a full checklist.
 
@@ -225,12 +247,20 @@ Use [Walnut](https://walnut.dev) to inspect transactions on Sepolia (or Mainnet)
 
 ## Quick Checklist
 
+**Every deploy (fresh or redeploy):**
 - [ ] RPC URL and chain ID verified (SN_SEPOLIA).
 - [ ] Account deployed on Sepolia with ETH.
 - [ ] `.env.sepolia` created from `.env.sepolia.example` and filled.
-- [ ] `sozo -P sepolia build` and `sozo -P sepolia migrate` run (or `./scripts/deploy_sepolia.sh`).
-- [ ] `world_address` (and optionally `world_block`) set in `dojo_sepolia.toml`.
-- [ ] (Optional) Torii indexer: `./scripts/setup_torii_sepolia.sh` (after Slot install + `slot auth login`).
-- [ ] (Optional) Coin shop initialized if using STRK purchases.
+- [ ] **Redeploy:** `world_address` in `dojo_sepolia.toml` is the **existing** world address.
+- [ ] **Fresh deploy:** `world_address = "0"` in `dojo_sepolia.toml`; after migrate, set it to the printed address.
+- [ ] Run `./scripts/deploy_sepolia.sh` (or manual `sozo -P sepolia build` and `sozo -P sepolia migrate --use-blake2s-casm-class-hash`).
+- [ ] (Optional) Coin shop: set `STRK_TOKEN_ADDRESS` in `.env.sepolia` for auto-init, or call `initialize_coin_shop` / `update_exchange_rate` manually.
+
+**After redeploy (if models/schema changed):**
+- [ ] Recreate Torii: `slot deployments delete <SERVICE_NAME> torii` then `./scripts/setup_torii_sepolia.sh`.
+- [ ] Update frontend/client with new manifest or world address if needed.
+
+**Optional (first-time or when adding indexer):**
+- [ ] Torii indexer: `./scripts/setup_torii_sepolia.sh` (after Slot install + `slot auth login`).
 
 For Mainnet, repeat with a mainnet RPC, mainnet account, and profile/mainnet config (e.g. `dojo_mainnet.toml` and a mainnet deploy script).

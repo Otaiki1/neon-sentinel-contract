@@ -28,7 +28,8 @@ default = "neon_sentinel"
 rpc_url = ""         # or env: STARKNET_RPC_URL
 account_address = "" # or env: DOJO_ACCOUNT_ADDRESS
 private_key = ""     # or env: DOJO_PRIVATE_KEY
-# For fresh deploy set to "0". After first successful migrate, set to the printed world address.
+# Redeploy: keep this as the existing world address so migrate upgrades it.
+# Fresh deploy: set to "0", then after first successful migrate set to the printed world address.
 world_address = "0x04fa7aba1a6f464a1bd73728e1d1c14f60d8099c606ac993d6af27c0ce82e0c1"
 
 [writers]

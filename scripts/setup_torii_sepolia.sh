@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Create a Torii indexer for the Neon Sentinel world on Sepolia via Slot.
 # Prerequisites: Slot installed (slotup), logged in (slot auth login), world already deployed.
+# After a redeploy: if models/schema changed, recreate Torii (slot deployments delete <NAME> torii; then run this script again).
 # Usage: ./scripts/setup_torii_sepolia.sh [SERVICE_NAME]
 
 set -e

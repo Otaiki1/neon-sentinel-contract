@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
-# Deploy Neon Sentinel Dojo world to Starknet Sepolia testnet.
+# Deploy or redeploy Neon Sentinel Dojo world to Starknet Sepolia testnet.
+#
 # Prerequisites: .env.sepolia with STARKNET_RPC_URL, DOJO_ACCOUNT_ADDRESS, DOJO_PRIVATE_KEY
-# Optional: STRK_TOKEN_ADDRESS in .env.sepolia to initialize the coin shop on first deploy (else only update_exchange_rate is called).
-# Exchange rate is set to 10 (10 STRK = 100 coins) after migrate.
-# For first deploy: set world_address = "0" in dojo_sepolia.toml [env]; after migrate, set it to the printed world address.
+# Optional: STRK_TOKEN_ADDRESS in .env.sepolia to initialize the coin shop (else only update_exchange_rate if shop exists).
+#
+# Redeploy (upgrade existing world): set world_address in dojo_sepolia.toml to the existing world address.
+# Fresh deploy: set world_address = "0" in dojo_sepolia.toml; after migrate, set it to the printed address.
+#
 # Usage: ./scripts/deploy_sepolia.sh
 
 set -e
@@ -24,6 +27,17 @@ log_debug() {
 }
 
 cd "$ROOT_DIR"
+
+# Remind about world_address for redeploy vs fresh
+WORLD_IN_CONFIG=$(grep -E '^world_address\s*=' dojo_sepolia.toml 2>/dev/null | sed -n 's/.*"\(.*\)".*/\1/p' || echo "")
+if [ -z "$WORLD_IN_CONFIG" ]; then
+  echo "Note: could not read world_address from dojo_sepolia.toml. For fresh deploy use \"0\"; for redeploy use existing world address."
+elif [ "$WORLD_IN_CONFIG" = "0" ]; then
+  echo "Fresh deploy: world_address is 0. A new world will be deployed."
+else
+  echo "Redeploy: world_address is set. Sozo will upgrade the existing world."
+fi
+echo ""
 
 # #region agent log
 # H1: sierra-replace-ids must be false for deterministic class hashes
