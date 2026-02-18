@@ -271,7 +271,7 @@ await account.execute({
 - **Contract address:** `NEON_SENTINEL.SUBMIT_LEADERBOARD`
 - **Entrypoint:** `submit_leaderboard`
 - **Calldata:** `[run_id_low, run_id_high, week: u32]`
-  - `week = floor(block_number / 50400)`; get current block from provider and compute, or query from chain.
+  - **Week (timestamp-based):** `week = floor(blockTimestamp / 604800)` (604800 = 7 days in seconds). Get the **current block's timestamp** from RPC (e.g. `starknet_getBlockWithTxHashes` or block by number, then use `timestamp`), compute `week = Math.floor(blockTimestamp / 604800)`, and call `submit_leaderboard(run_id, week)`.
 
 ```ts
 await account.execute({
@@ -424,6 +424,8 @@ Use `run_id_low` / `run_id_high` from Player to match the correct RunState row. 
 
 ### 5.3 Example: Leaderboard by week
 
+On-chain leaderboard week is **timestamp-based**: `current_week = floor(block_timestamp / 604800)`. Torii still filters by `week`; use the same formula when querying for the "current" week (get latest block's timestamp from RPC, then `week = Math.floor(timestamp / 604800)`).
+
 ```graphql
 query GetLeaderboard($week: Int!) {
   leaderboardEntries(where: { week: $week }, order: { final_score: "desc" }, limit: 100) {
@@ -443,7 +445,7 @@ Exact field names (e.g. `entry_id_low` vs `entry_id`) depend on the generated To
 
 ### 5.4 Leaderboard ranking and user metrics
 
-**Leaderboard ranking** (general game state): query **LeaderboardEntry** by week, order by `final_score` desc (see §5.3). **User metrics**: query **PlayerProfile** by `player_address` for lifetime_score, best_run_score, current_layer, etc.
+**Leaderboard ranking** (general game state): query **LeaderboardEntry** by week (timestamp-based index: `week = floor(block_timestamp / 604800)`), order by `final_score` desc (see §5.3). **User metrics**: query **PlayerProfile** by `player_address` for lifetime_score, best_run_score, current_layer, etc.
 
 ### 5.5 Rank NFTs and badges
 
@@ -505,12 +507,18 @@ Simulate run locally; on game over compute `final_score`, `total_kills`, `final_
 ### 7.5 End run and submit to leaderboard
 
 1. Call **end_run**(run_id, final_score, total_kills, final_layer).
-2. After confirmation, compute `week = floor(block_number / 50400)` and call **submit_leaderboard**(run_id, week).
+2. After confirmation, get the current block's **timestamp** from RPC, compute `week = Math.floor(blockTimestamp / 604800)`, and call **submit_leaderboard**(run_id, week).
 3. Refresh Player, RunState, PlayerProfile, and leaderboard from Torii.
 
 ### 7.6 Leaderboard view
 
 Query **LeaderboardEntry** by week, order by final_score; display in your Hall of Fame UI.
+
+#### Leaderboard and week sync (contract vs frontend)
+
+- **Chain week:** `week = floor(block_timestamp / 604800)` (Unix seconds; 604800 = 7 days). One on-chain board per week index. Each period is exactly 7 real days regardless of block production.
+- **Submission:** Get the latest block's `timestamp` from RPC → compute `week = Math.floor(blockTimestamp / 604800)` → call `submit_leaderboard(run_id, week)`.
+- **Local vs on-chain:** The frontend can keep ISO week for local display and featured categories; the on-chain leaderboard is keyed by this timestamp-based week index. When showing "current chain leaderboard", use the same week formula for the query.
 
 ---
 
@@ -531,7 +539,7 @@ Map contract reverts to user-facing messages:
 | Purchasing paused | "Coin shop is paused." |
 | STRK / approval / amount | "Check STRK approval and amount; shop may be paused." |
 
-Use block number for cooldowns and week; do not rely on client time for game rules.
+Use block number for claim cooldowns; use **block timestamp** for leaderboard week (see §4.4). Do not rely on client time for game rules.
 
 ---
 
@@ -541,7 +549,7 @@ Use block number for cooldowns and week; do not rely on client time for game rul
 |--------|--------|
 | Coins per daily claim | 3 |
 | Blocks per day (claim cooldown) | 7200 |
-| Blocks per week (leaderboard) | 50400 |
+| Seconds per week (leaderboard) | 604800 |
 | Kernel range | 0..5 |
 | Starting lives / max lives | 3 / 20 |
 | Combo 1.0x (basis) | 1000 |
@@ -558,7 +566,7 @@ Use block number for cooldowns and week; do not rely on client time for game rul
 - [ ] **Torii:** Set GraphQL URL to `https://api.cartridge.gg/x/neon-sentinel-sepolia/torii/graphql`. Use for Player, RunState, PlayerProfile, LeaderboardEntry, TokenPurchaseConfig.
 - [ ] **System calls:** Implement init_game (start_run), end_run, submit_leaderboard, claim_coins, spend_coins, purchase_cosmetic, buy_coins, spend_revive, purchase_mini_me_unit, purchase_mini_me_sessions with calldata as in §4. Use u256 as [low, high] where applicable.
 - [ ] **Session policies (optional):** Add game system contracts to Controller session policies for gasless / pre-approved txs.
-- [ ] **Block number:** Use provider for current block when computing week and claim cooldown.
+- [ ] **Block timestamp / number:** Use provider: block **timestamp** for leaderboard week (`week = floor(timestamp / 604800)`); block **number** for claim cooldown.
 - [ ] **Errors:** Map revert reasons to UI messages; validate kernel, coins, and run state before calling.
 - [ ] **Refresh after tx:** After each write, refetch or subscribe to Torii so UI shows updated state.
 

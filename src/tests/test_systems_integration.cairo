@@ -32,7 +32,7 @@ mod tests {
     use neon_sentinel::systems::spend_revive::{
         ISpendReviveDispatcher, ISpendReviveDispatcherTrait, spend_revive,
     };
-    use starknet::testing::set_block_number;
+    use starknet::testing::{set_block_number, set_block_timestamp};
     use starknet::ContractAddress;
 
     fn zero_u256() -> u256 {
@@ -180,7 +180,8 @@ mod tests {
         assert(profile_after_end.highest_rank_id == 2, 'highest_rank_id 2');
         assert(profile_after_end.highest_rank_tier_minted == 2, 'rank tier minted');
 
-        // §7.5: Submit to leaderboard (week from block 2000)
+        // §7.5: Submit to leaderboard (week from timestamp; ts < 604800 => week 0)
+        set_block_timestamp(1000);
         let week: u32 = 0;
         let (sub_addr, _) = world.dns(@"submit_leaderboard").unwrap();
         let sub_sys = ISubmitLeaderboardDispatcher { contract_address: sub_addr };
@@ -326,6 +327,7 @@ mod tests {
         let end_sys = IEndRunDispatcher { contract_address: end_addr };
         end_sys.end_run(run_id, 1000, 5, 2);
 
+        set_block_timestamp(1000);
         let week: u32 = 0;
         let (sub_addr, _) = world.dns(@"submit_leaderboard").unwrap();
         let sub_sys = ISubmitLeaderboardDispatcher { contract_address: sub_addr };
@@ -470,6 +472,7 @@ mod tests {
     #[should_panic(expected: ('Already submitted',))]
     fn test_security_double_submission_leaderboard_twice() {
         set_block_number(50000);
+        set_block_timestamp(1000);
         let (mut world, caller) = setup_world_with_profile();
         let (addr, _) = world.dns(@"init_game").unwrap();
         let init = IInitGameDispatcher { contract_address: addr };

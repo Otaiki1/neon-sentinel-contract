@@ -48,7 +48,7 @@ flowchart LR
 ### 1.2 Execution and Timing
 
 - **Authority:** The chain is the single source of truth. Every state transition is a transaction; block order defines event order.
-- **Timing:** All game-relevant time is **block-based**. Systems use `get_execution_info().block_info.block_number` (and, where needed, `block_timestamp`). Client-provided timestamps are never used for cooldowns, tick order, or leaderboard week.
+- **Timing:** Systems use `get_execution_info().block_info.block_number` and `block_timestamp`. Leaderboard **week** is derived from **block_timestamp** (7 real days per period); block_number is used for claim cooldowns, submission_block, etc. Client-provided timestamps are never used for game rules.
 - **Determinism:** Run identity and tick order are deterministic from chain data. Replay verification relies on the same: given the same `run_id`, block sequence, and inputs, the same state transitions are reproducible.
 
 ### 1.3 High-Level Data Flow
@@ -209,7 +209,7 @@ Every model is a `#[dojo::model]` struct. Keys are marked with `#[key]` and uniq
 | ------------------------------------------------------ | ------------------------ | --------------------------------------------------- |
 | **entry_id**                                           | u256                     | Key. Deterministic: run_id.low + week, run_id.high. |
 | player_address, player_name                            | ContractAddress, felt252 | Player; name placeholder.                           |
-| week                                                   | u32                      | Leaderboard week = block_number / BLOCKS_PER_WEEK.  |
+| week                                                   | u32                      | Timestamp-based period index: block_timestamp / SECONDS_PER_WEEK (604800). One board per week. |
 | final_score, deepest_layer, prestige_level             | u64, u8, u8              | From RunState at submit.                            |
 | survival_blocks                                        | u64                      | last_tick_block - started_at_block.                 |
 | max_corruption, enemies_defeated, peak_combo, accuracy | u32                      | Run stats.                                          |
@@ -299,7 +299,7 @@ Every model is a `#[dojo::model]` struct. Keys are marked with `#[key]` and uniq
 ### 4.3 submit_leaderboard
 
 - **Purpose:** Record the finished run on the weekly leaderboard with proof fields; one submission per run.
-- **Week:** `current_leaderboard_week(block_number) = block_number / BLOCKS_PER_WEEK` (50400). Client must pass this value; contract asserts week == current_leaderboard_week(block_number).
+- **Week:** `current_leaderboard_week(block_timestamp) = block_timestamp / SECONDS_PER_WEEK` (604800 = 7 days). One leaderboard week = 7 real days regardless of block production. Client must pass this value; contract asserts week == current_leaderboard_week(block_timestamp).
 - **Replay check:** If total_ticks_processed > 0, reads GameTick for (caller, run_id, total_ticks_processed) to ensure the tick chain exists; sets replay_verifiable = true. **BALANCED:** total_ticks_processed is not updated on-chain (remains 0 from init_game), so replay_verifiable is false and GameTick is never read.
 - **entry_id:** `entry_id_for_run_week(run_id, week)` = u256 { low: run_id.low + week, high: run_id.high }.
 - **submission_hash:** Same as state_hash_for_run(run_state). game_seed = run_id. event_log_hash is placeholder (zero) until incremental event hashing is added.
@@ -370,7 +370,7 @@ Every model is a `#[dojo::model]` struct. Keys are marked with `#[key]` and uniq
 | COMBO_ONE                                        | 1000      | init_game (client-side combo in BALANCED) | 1.0x combo basis        |
 | BLOCKS_PER_DAY                                   | 7200      | claim_coins                               | 24h cooldown            |
 | COINS_PER_CLAIM                                  | 3         | claim_coins                               | Coins per claim         |
-| BLOCKS_PER_WEEK                                  | 50400     | submit_leaderboard                        | Week length in blocks   |
+| SECONDS_PER_WEEK                                 | 604800   | submit_leaderboard                        | Week length in seconds (7 days) |
 | LEADERBOARD_MIN_SCORE                            | 1000      | end_run                                   | Score threshold for bonus coins |
 | SCORE_BONUS_COINS                                | 10        | end_run                                   | Bonus coins if score >= threshold |
 | MAX_LAYER                                        | 6         | (client-side in BALANCED)                 | Layers 1..6             |

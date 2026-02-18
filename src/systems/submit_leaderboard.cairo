@@ -1,11 +1,12 @@
 //! submit_leaderboard system: records a completed run to the immutable leaderboard.
 //! SECURITY: Validates run is finished, not already submitted, week matches,
 //! and replay integrity; creates permanent on-chain proof.
+//! Week is timestamp-based: one leaderboard week = 7 real days (604800 seconds).
 
 use core::integer::u256;
 
-/// Blocks per week for leaderboard period (e.g. ~7 days at 12s/block).
-const BLOCKS_PER_WEEK: u64 = 50400;
+/// Seconds per week for leaderboard period (7 * 24 * 3600 = 7 real days).
+const SECONDS_PER_WEEK: u64 = 604800;
 
 #[starknet::interface]
 pub trait ISubmitLeaderboard<T> {
@@ -18,7 +19,7 @@ pub mod submit_leaderboard {
     use dojo::model::ModelStorage;
     use starknet::{get_caller_address, get_execution_info};
 
-    use super::BLOCKS_PER_WEEK;
+    use super::SECONDS_PER_WEEK;
     use super::ISubmitLeaderboard;
     use neon_sentinel::models::{GameTick, LeaderboardEntry, RunState};
 
@@ -28,9 +29,9 @@ pub mod submit_leaderboard {
 
     const TWO_32: u128 = 4294967296;
 
-    /// Current leaderboard week from block number (deterministic).
-    fn current_leaderboard_week(block_number: u64) -> u32 {
-        (block_number / BLOCKS_PER_WEEK).try_into().unwrap()
+    /// Current leaderboard week from block timestamp (7-day real-time periods since Unix epoch).
+    fn current_leaderboard_week(block_timestamp: u64) -> u32 {
+        (block_timestamp / SECONDS_PER_WEEK).try_into().unwrap()
     }
 
     /// Deterministic state hash for finalized run (must match end_run logic).
@@ -62,6 +63,7 @@ pub mod submit_leaderboard {
             let caller = get_caller_address();
             let exec_info = get_execution_info();
             let block_number = exec_info.block_info.block_number;
+            let block_timestamp = exec_info.block_info.block_timestamp;
 
             // 1. Validate run is finished
             let mut run_state: RunState = world.read_model((caller, run_id));
@@ -70,8 +72,8 @@ pub mod submit_leaderboard {
             // 2. Check not already submitted
             assert(!run_state.submitted_to_leaderboard, 'Already submitted');
 
-            // 3. Verify current week matches leaderboard week
-            let current_week = current_leaderboard_week(block_number);
+            // 3. Verify current week matches leaderboard week (timestamp-based: 7 real days per week)
+            let current_week = current_leaderboard_week(block_timestamp);
             assert(week == current_week, 'Week mismatch');
 
             // 4. Replay verification: ensure last tick exists so run is replayable

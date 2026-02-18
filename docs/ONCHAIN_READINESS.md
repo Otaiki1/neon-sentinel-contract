@@ -36,7 +36,7 @@ This document maps the **frontend game** (React + Phaser, currently localStorage
 
 - **Start run** — **init_game(kernel, pregame_upgrades_mask, expected_cost)**. Generates a **run_id** (run hash) from block + caller; creates Player + RunState, deducts coins for upgrades. Kernel 0 is free; kernels 1..5 must be unlocked via **purchase_cosmetic**. If the player already had an active run, that run is abandoned (no consolidation); a new run_id is created. ✅
 - **End run** — **end_run(run_id, final_score, total_kills, final_layer)**. Validates run_id matches current Player.run_id; updates RunState (is_finished, final_*), Player (inactive), PlayerProfile (total_runs, lifetime_*, best_run_score, current_layer, +10 coins if score ≥ 1000). Mints **RankNFT** when the player reaches a new rank tier (prestige×6 + layer−1). ✅
-- **Leaderboard** — **submit_leaderboard(run_id, week)**. Creates immutable LeaderboardEntry; week = block_number / 50400. General game state for ranking = LeaderboardEntry queries by week; user metrics = PlayerProfile. ✅
+- **Leaderboard** — **submit_leaderboard(run_id, week)**. Creates immutable LeaderboardEntry; week = block_timestamp / 604800 (7 real days). General game state for ranking = LeaderboardEntry queries by week; user metrics = PlayerProfile. ✅
 
 ### 2.3 User Stats (PlayerProfile)
 

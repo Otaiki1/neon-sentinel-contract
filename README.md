@@ -176,7 +176,7 @@ For **production (Sepolia)** world address and Torii/GraphQL URLs, see [INTEGRAT
 2. **Start run** — `init_game(kernel, pregame_upgrades_mask, expected_cost)`. Creates `Player` and `RunState`, deducts coins if `expected_cost > 0`.
 3. **Play (client-side)** — Simulate ticks, movement, hits, and score locally. No on-chain tick or hit systems in BALANCED.
 4. **End run** — `end_run(run_id, final_score, total_kills, final_layer)`. Submits client-computed final state; sets `is_finished`, updates Profile and (if score ≥ 1000) awards bonus coins; marks player inactive.
-5. **Leaderboard** — `submit_leaderboard(run_id, week)`. Week = `block_number / 50400`. Creates immutable `LeaderboardEntry` with proof fields.
+5. **Leaderboard** — `submit_leaderboard(run_id, week)`. Week = `block_timestamp / 604800` (7 real days). Creates immutable `LeaderboardEntry` with proof fields.
 
 ---
 
