@@ -23,55 +23,90 @@
 
 ## Contracts Architecture
 
-The Dojo **World** owns the canonical state. All systems are Starknet contracts registered as writers of the `neon_sentinel` namespace. Support modules (`erc20`, `owner_access`, `token_validation`) provide shared logic and are not deployed as standalone contracts.
+The Dojo **World** owns the canonical state. All **systems** are Starknet contracts registered as writers of the `neon_sentinel` namespace; they read and write **models** (ECS state). **Support modules** are Cairo libraries used by systems and are not deployed as standalone contracts.
+
+### Complete architecture
 
 ```mermaid
 flowchart TB
   subgraph world [Dojo World]
-    NS[Namespace: neon_sentinel]
+    NS[Namespace neon_sentinel]
   end
 
-  subgraph game [Game Systems]
-    IG[init_game]
-    ER[end_run]
-    SL[submit_leaderboard]
-    ACT[actions]
+  subgraph systems [Systems - Starknet contracts]
+    subgraph game [Game]
+      IG[init_game]
+      ER[end_run]
+      SL[submit_leaderboard]
+      ACT[actions]
+    end
+    subgraph economy [Economy]
+      CC[claim_coins]
+      SC[spend_coins]
+      SR[spend_revive]
+    end
+    subgraph cosmetics [Cosmetics]
+      PC[purchase_cosmetic]
+    end
+    subgraph shop [Coin Shop]
+      ICS[initialize_coin_shop]
+      BC[buy_coins]
+      UER[update_exchange_rate]
+      PUP[pause_unpause_purchasing]
+    end
+    subgraph miniMe [Mini-Me]
+      PMU[purchase_mini_me_unit]
+      PMS[purchase_mini_me_sessions]
+    end
   end
 
-  subgraph economy [Economy Systems]
-    CC[claim_coins]
-    SC[spend_coins]
+  subgraph models [Models - on-chain state]
+    subgraph gameModels [Game]
+      P[Player]
+      RS[RunState]
+      E[Enemy]
+      GT[GameTick]
+      GE[GameEvent]
+      LB[LeaderboardEntry]
+      RNFT[RankNFT]
+    end
+    subgraph profileModels [Profile]
+      PP[PlayerProfile]
+    end
+    subgraph shopModels [Coin Shop]
+      CSG[CoinShopGlobal]
+      TPC[TokenPurchaseConfig]
+      CPR[CoinPurchaseRecord]
+      CPH[CoinPurchaseHistory]
+      WR[WithdrawalRequest]
+    end
+    subgraph otherModels [Other]
+      MM[MiniMeInventory]
+      Demo[Position / Moves / DirectionsAvailable / PositionCount]
+    end
   end
 
-  subgraph shop [Coin Shop Systems]
-    ICS[initialize_coin_shop]
-    BC[buy_coins]
-    UER[update_exchange_rate]
-    PUP[pause_unpause_purchasing]
-  end
-
-  subgraph models [Models]
-    P[Player]
-    R[RunState]
-    E[Enemy]
-    GT[GameTick]
-    GE[GameEvent]
-    LB[LeaderboardEntry]
-    PP[PlayerProfile]
-    CSG[CoinShopGlobal]
-    TPC[TokenPurchaseConfig]
-    CPR[CoinPurchaseRecord]
-    CPH[CoinPurchaseHistory]
-    WR[WithdrawalRequest]
-    M[DirectionsAvailable / Moves / Position / PositionCount]
+  subgraph support [Support modules - not deployed]
+    ERC20[erc20]
+    OWN[owner_access]
+    TV[token_validation]
+    CSC[coin_shop_config]
+    RC[rank_config]
   end
 
   world --> NS
-  game --> NS
-  economy --> NS
-  shop --> NS
+  systems -->|"read/write"| NS
   NS --> models
+  systems -.->|"use"| support
 ```
+
+| Layer | Role |
+|-------|------|
+| **World** | Single Dojo world contract; owns namespace and enforces which contracts can write. |
+| **Namespace** | `neon_sentinel` — all game models and permitted system writers are scoped here. |
+| **Systems** | 14 Starknet contracts. Only these can mutate `neon_sentinel` state; clients call system entrypoints (e.g. `init_game`, `end_run`, `submit_leaderboard`). |
+| **Models** | Dojo ECS state: Player, RunState, LeaderboardEntry, PlayerProfile, RankNFT, coin shop entities, MiniMeInventory, etc. Keyed by address, run_id, or other composite keys. |
+| **Support** | Shared logic (ERC20 interface, owner checks, STRK validation, shop/rank config); used by systems but not deployed as contracts. |
 
 ---
 
