@@ -222,26 +222,32 @@ pub struct PlayerProfile {
     pub cosmetic_unlocks: u64,
     pub last_profile_update_block: u64,
     pub profile_hash: u256,
-    /// Highest rank tier (prestige*6 + layer-1) for which a RankNFT was minted; avoids duplicate mints.
+    /// Highest rank tier (prestige*6 + layer-1) for which a RankNFT was minted; kept in sync with highest_rank_id.
     pub highest_rank_tier_minted: u8,
+    /// Highest of 18 named ranks achieved (1..18); 0 = none. Displayed rank source of truth.
+    pub highest_rank_id: u8,
     /// Last block at which Prime Sentinel daily bonus was claimed (3 coins once per 7200 blocks).
     pub last_prime_sentinel_claim_block: u64,
     /// Number of Mini-Me session packs purchased (+3 sessions each); capacity = 3 + this*3.
     pub mini_me_sessions_purchased: u32,
 }
 
-/// Rank achievement NFT (soulbound). Minted when player reaches a new rank tier.
+/// Rank achievement NFT (soulbound). One per (owner, rank_id); minted when player first achieves that rank (1..18).
 #[derive(Copy, Drop, Serde, Debug)]
 #[dojo::model]
 pub struct RankNFT {
     #[key]
-    pub token_id: u256,
     pub owner: ContractAddress,
+    #[key]
+    pub rank_id: u8,
+    /// Display tier 1..5 (entry, intermediate, advanced, elite, legendary).
     pub rank_tier: u8,
     pub prestige: u8,
     pub layer: u8,
     pub achieved_at_block: u64,
     pub run_id: u256,
+    /// Deterministic token_id for external NFT indexing (derived from owner + rank_id).
+    pub token_id: u256,
 }
 
 // ============== Token purchase & treasury models ==============

@@ -103,6 +103,7 @@ mod tests {
             last_profile_update_block: 0,
             profile_hash: zero_u256(),
             highest_rank_tier_minted: 0,
+            highest_rank_id: 0,
             last_prime_sentinel_claim_block: 0,
             mini_me_sessions_purchased: 0,
         };

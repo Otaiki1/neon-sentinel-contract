@@ -116,6 +116,7 @@ mod tests {
             last_profile_update_block: 0,
             profile_hash: zero_u256(),
             highest_rank_tier_minted: 0,
+            highest_rank_id: 0,
             last_prime_sentinel_claim_block: 0,
             mini_me_sessions_purchased: 0,
         };
@@ -160,11 +161,12 @@ mod tests {
         assert(player.kernel == 1, 'kernel 1 used');
 
         // §7.4 (client-side) + §7.5: End run with client-submitted final state
+        // RunState.current_prestige is 0 at init; use milestone (0, 3) → rank_id 2 (intermediate tier).
         let (end_addr, _) = world.dns(@"end_run").unwrap();
         let end_sys = IEndRunDispatcher { contract_address: end_addr };
         let final_score: u64 = 1500;
         let total_kills: u32 = 25;
-        let final_layer: u8 = 2;
+        let final_layer: u8 = 3;
         end_sys.end_run(run_id, final_score, total_kills, final_layer);
 
         let profile_after_end: PlayerProfile = world.read_model(caller);
@@ -174,8 +176,9 @@ mod tests {
         assert(profile_after_end.current_layer == final_layer, 'current_layer');
         assert(profile_after_end.coins == 500 + 10, 'bonus coins for score >= 1000');
 
-        // Rank NFT minted (tier = 0*6 + (2-1) = 1)
-        assert(profile_after_end.highest_rank_tier_minted == 1, 'rank tier 1 minted');
+        // Rank: (0,3) → rank_id 2 (entry tier per tier_for_rank: 1–3 = entry)
+        assert(profile_after_end.highest_rank_id == 2, 'highest_rank_id 2');
+        assert(profile_after_end.highest_rank_tier_minted == 2, 'rank tier minted');
 
         // §7.5: Submit to leaderboard (week from block 2000)
         let week: u32 = 0;
@@ -194,13 +197,13 @@ mod tests {
         assert(entry.final_score == final_score, 'entry score');
         assert(entry.player_address == caller, 'entry player');
 
-        // Rank NFT query (by owner)
-        let block_128: u128 = 2000;
-        let tier_128: u128 = 1;
-        let token_id = u256 { low: run_id.low + block_128, high: run_id.high + tier_128 };
-        let rank_nft: RankNFT = world.read_model(token_id);
+        // Rank NFT query by (owner, rank_id)
+        let rank_id: u8 = 2;
+        let rank_nft: RankNFT = world.read_model((caller, rank_id));
         assert(rank_nft.owner == caller, 'rank nft owner');
-        assert(rank_nft.rank_tier == 1, 'rank nft tier');
+        assert(rank_nft.rank_id == 2, 'rank nft rank_id');
+        assert(rank_nft.rank_tier == 1, 'rank nft tier entry');
+        assert(rank_nft.prestige == 0 && rank_nft.layer == 3, 'prestige layer');
     }
 
     /// §7.2: Claim coins (first claim); then §7.3 start run. Mirrors FE: claim → start run.
@@ -373,24 +376,21 @@ mod tests {
         let player: Player = world.read_model(caller);
         let run_id = player.run_id;
 
+        // End at milestone (0, 1) → rank_id 1 (entry tier) so Rank NFT is minted
         let (end_addr, _) = world.dns(@"end_run").unwrap();
         let end_sys = IEndRunDispatcher { contract_address: end_addr };
-        end_sys.end_run(run_id, 500, 10, 2);
+        end_sys.end_run(run_id, 500, 10, 1);
 
         let profile: PlayerProfile = world.read_model(caller);
+        assert(profile.highest_rank_id == 1, 'highest_rank_id 1');
         assert(profile.highest_rank_tier_minted == 1, 'tier 1 minted');
-        let run_state: RunState = world.read_model((caller, run_id));
-        let _tier: u8 = run_state.current_prestige * 6 + (run_state.final_layer - 1);
-        let block_128: u128 = 4200;
-        let tier_128: u128 = 1;
-        let token_id = u256 {
-            low: run_id.low + block_128,
-            high: run_id.high + tier_128,
-        };
-        let rank_nft: RankNFT = world.read_model(token_id);
+
+        let rank_id: u8 = 1;
+        let rank_nft: RankNFT = world.read_model((caller, rank_id));
         assert(rank_nft.owner == caller, 'nft owner');
-        assert(rank_nft.rank_tier == 1, 'rank tier 1');
-        assert(rank_nft.prestige == 0 && rank_nft.layer == 2, 'prestige layer');
+        assert(rank_nft.rank_id == 1, 'rank id 1');
+        assert(rank_nft.rank_tier == 1, 'rank tier 1 entry');
+        assert(rank_nft.prestige == 0 && rank_nft.layer == 1, 'prestige layer');
     }
 
     // ---------- Error cases (§8 Errors and Validation; run with snforge for should_panic) ----------
@@ -487,7 +487,7 @@ mod tests {
     }
 
     #[test]
-    #[available_gas(80000000)]
+    #[available_gas(120000000)]
     fn test_start_run_again_overwrites_previous_run() {
         set_block_number(60000);
         let (mut world, caller) = setup_world_with_profile();

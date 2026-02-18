@@ -230,6 +230,8 @@ Every model is a `#[dojo::model]` struct. Keys are marked with `#[key]` and uniq
 | ----------------------------------------------------------------- | --------------- | ---------------------------------------------------------------------- |
 | **player_address**                                                | ContractAddress | Key.                                                                   |
 | current_prestige, current_layer, highest_prestige_reached         | u8              | Progress.                                                              |
+| highest_rank_id                                                    | u8              | Highest of the 18 ranks achieved (0 = none, 1..18). Source of truth for displayed rank. |
+| highest_rank_tier_minted                                           | u8              | Kept in sync with highest_rank_id (1..18) for legacy/tier readers.     |
 | is_prime_sentinel                                                 | bool            | Flag.                                                                  |
 | total_runs, lifetime_score, lifetime_playtime_blocks, ...         | u32/u64         | Aggregates.                                                            |
 | coins                                                             | u32             | Balance; increased by claim_coins, buy_coins, end_run (prestige/score bonus); decreased by init_game, spend_coins, spend_revive, purchase_cosmetic, purchase_mini_me_*. |
@@ -241,13 +243,31 @@ Every model is a `#[dojo::model]` struct. Keys are marked with `#[key]` and uniq
 | selected_kernel, kernel_unlocks, avatar_unlocks, cosmetic_unlocks | u8/u64          | Unlocks.                                                               |
 | last_profile_update_block, profile_hash                           | u64, u256       | Metadata.                                                              |
 
-**Writers:** init_game (coins, log hash, count), claim_coins (coins, last_coin_claim_block, last_prime_sentinel_claim_block, log hash, count), spend_coins (coins, log hash, count), buy_coins (coins, log hash, count), spend_revive (coins, log hash, count), purchase_cosmetic (coins, kernel_unlocks, log hash, count), purchase_mini_me_unit (coins, log hash, count), purchase_mini_me_sessions (coins, mini_me_sessions_purchased, log hash, count). Profile is created/updated by systems or by world setup; clients cannot write.
+**Writers:** init_game (coins, log hash, count), claim_coins (coins, last_coin_claim_block, last_prime_sentinel_claim_block, log hash, count), spend_coins (coins, log hash, count), buy_coins (coins, log hash, count), spend_revive (coins, log hash, count), purchase_cosmetic (coins, kernel_unlocks, log hash, count), purchase_mini_me_unit (coins, log hash, count), purchase_mini_me_sessions (coins, mini_me_sessions_purchased, log hash, count), end_run (highest_rank_id, highest_rank_tier_minted when a new rank milestone is reached). Profile is created/updated by systems or by world setup; clients cannot write.
 
-### 3.8 MiniMeInventory
+### 3.8 Rank catalog and RankNFT
+
+**Rank catalog** (`src/rank_config.cairo`): 18 named ranks at fixed (prestige, layer) milestones. Tier display: 1 = entry, 2 = intermediate, 3 = advanced, 4 = elite, 5 = legendary. Functions: `rank_id_for_milestone(prestige, layer)` → 1..18 or 0; `tier_for_rank(rank_id)` → 1..5.
+
+**RankNFT model:**
+
+| Field              | Type              | Semantics                                                                 |
+| ------------------ | ----------------- | ------------------------------------------------------------------------- |
+| **owner**          | ContractAddress   | Key.                                                                      |
+| **rank_id**        | u8                | Key. 1..18; one NFT per (owner, rank_id).                                 |
+| rank_tier          | u8                | 1..5 (entry..legendary).                                                 |
+| prestige, layer    | u8                | Prestige and layer at which this rank was achieved.                       |
+| achieved_at_block  | u64               | Block when minted.                                                        |
+| run_id             | u256              | Run that achieved the milestone.                                          |
+| token_id           | u256              | Optional; deterministic from owner + rank_id for external indexing.      |
+
+**Writers:** end_run only. Minted when the player finishes a run at a milestone (prestige, final_layer) that maps to a rank_id and that rank was not already minted for that owner.
+
+### 3.9 MiniMeInventory
 
 - **Keys:** player_address, unit_type (u8, 0..6). **Fields:** count (u8, max 20 per type). Writer: purchase_mini_me_unit.
 
-### 3.9 Coin Shop Models
+### 3.10 Coin Shop Models
 
 - **CoinShopGlobal** — Singleton (key = 0): global_key, owner only. Used to resolve the owner so systems can read TokenPurchaseConfig by owner. Writers: initialize_coin_shop (create).
 - **TokenPurchaseConfig** — Key: owner (ContractAddress). Holds strk_token_address, coin_exchange_rate, total_strk_collected, total_strk_withdrawn, total_coins_sold, paused, last_updated, next_withdrawal_id, etc. Writers: initialize_coin_shop (one-time), update_exchange_rate (rate only), pause_unpause_purchasing (paused), buy_coins (totals, withdrawals).
@@ -272,7 +292,7 @@ Every model is a `#[dojo::model]` struct. Keys are marked with `#[key]` and uniq
 
 - **Purpose:** Finalize the run with **client-submitted** final state. Client simulates gameplay locally (ticks, hits, score); chain accepts final_score, total_kills, final_layer.
 - **Signature:** `end_run(run_id, final_score, total_kills, final_layer)`. Parameters: run_id (u256), final_score (u64), total_kills (u32), final_layer (u8).
-- **Logic:** Assert run active and not already finished; set RunState.is_finished = true, final_score, enemies_defeated = total_kills, final_layer, last_tick_block; set Player.is_active = false; update PlayerProfile (total_runs += 1, lifetime_enemies_defeated += total_kills, lifetime_score += final_score, best_run_score if improved, current_layer if final_layer higher); award bonus coins if final_score >= LEADERBOARD_MIN_SCORE (1000); if final_layer == 6 (cleared), award prestige coins 2×2^current_prestige and advance current_prestige/highest_prestige_reached, and if current_prestige was 8 set is_prime_sentinel = true; mint RankNFT when new tier; emit game_end GameEvent; write RunState, Player, PlayerProfile.
+- **Logic:** Assert run active and not already finished; set RunState.is_finished = true, final_score, enemies_defeated = total_kills, final_layer, last_tick_block; set Player.is_active = false; update PlayerProfile (total_runs += 1, lifetime_enemies_defeated += total_kills, lifetime_score += final_score, best_run_score if improved, current_layer if final_layer higher); award bonus coins if final_score >= LEADERBOARD_MIN_SCORE (1000); if final_layer == 6 (cleared), award prestige coins 2×2^current_prestige and advance current_prestige/highest_prestige_reached, and if current_prestige was 8 set is_prime_sentinel = true. **Rank:** Compute rank_id = rank_id_for_milestone(run_state.current_prestige, final_layer). If rank_id > 0 and rank_id > profile.highest_rank_id, set profile.highest_rank_id and profile.highest_rank_tier_minted = rank_id. If rank_id > 0 and RankNFT at (caller, rank_id) not already minted (e.g. achieved_at_block == 0), write RankNFT(owner=caller, rank_id, rank_tier=tier_for_rank(rank_id), prestige, layer, achieved_at_block, run_id, token_id). Emit game_end GameEvent; write RunState, Player, PlayerProfile.
 - **Constants:** LEADERBOARD_MIN_SCORE = 1000, SCORE_BONUS_COINS = 10.
 - **Trust:** Chain trusts client-submitted score/kills/layer. Leaderboard and coins remain chain-verified; optional replay/bounds checks can be added later.
 

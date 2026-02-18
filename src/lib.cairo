@@ -17,6 +17,7 @@ pub mod systems {
 
 pub mod coin_shop_config;
 pub mod erc20;
+pub mod rank_config;
 pub mod models;
 pub mod owner_access;
 pub mod token_validation;

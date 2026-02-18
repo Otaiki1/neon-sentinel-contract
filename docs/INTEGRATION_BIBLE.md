@@ -373,6 +373,8 @@ Torii exposes a schema for Dojo entities (models). Entity names and keys follow 
 
 ### 5.1 Example: PlayerProfile by address
 
+**Displayed rank:** Use `highest_rank_id` (0 = none, 1..18 = highest rank achieved). The frontend maps rank_id to rank name and tier via the same 18-rank catalog (e.g. RANK_CONFIG); tier 1 = entry, 2 = intermediate, 3 = advanced, 4 = elite, 5 = legendary.
+
 ```graphql
 query GetPlayerProfile($address: String!) {
   playerProfile(where: { player_address: $address }) {
@@ -383,6 +385,7 @@ query GetPlayerProfile($address: String!) {
     lifetime_score
     best_run_score
     current_layer
+    highest_rank_id
     selected_kernel
     avatar_unlocks
   }
@@ -442,9 +445,12 @@ Exact field names (e.g. `entry_id_low` vs `entry_id`) depend on the generated To
 
 **Leaderboard ranking** (general game state): query **LeaderboardEntry** by week, order by `final_score` desc (see §5.3). **User metrics**: query **PlayerProfile** by `player_address` for lifetime_score, best_run_score, current_layer, etc.
 
-### 5.5 Rank NFTs
+### 5.5 Rank NFTs and badges
 
-Query **RankNFT** by `owner` to list a player's rank achievement NFTs (minted at end_run when they reach a new tier): `rankNFTs(where: { owner: $owner }) { token_id_low, token_id_high, rank_tier, prestige, layer, achieved_at_block }`.
+Rank NFTs are minted in **end_run** when the player reaches one of the **18 named rank milestones** (prestige, layer). Each player has at most one NFT per rank (rank_id 1..18).
+
+- **Displayed rank:** Query **PlayerProfile.highest_rank_id** (1..18). Map to rank name and tier (1=entry, 2=intermediate, 3=advanced, 4=elite, 5=legendary) using the same catalog as the chain (e.g. RANK_CONFIG).
+- **Rank history / badges:** Query **RankNFT** by `owner`. Key is composite `(owner, rank_id)`; each row is one minted rank badge. Example: `rankNFTs(where: { owner: $owner }) { rank_id, rank_tier, prestige, layer, achieved_at_block, run_id_low, run_id_high }`. Use `rank_id` to pick badge assets (e.g. badge_1 … badge_18).
 
 ### 5.6 Subscriptions
 
@@ -458,13 +464,13 @@ Use GraphQL subscriptions on the same endpoint to react to entity updates (e.g. 
 |--------|--------|-----|
 | **Player** | player_address | Active run: run_id, is_active, lives, position, kernel. |
 | **RunState** | player_address, run_id | Score, layer, is_finished, final_score, enemies_defeated, final_layer, submitted_to_leaderboard, revive_count, current_prestige, pregame_upgrades_mask. |
-| **PlayerProfile** | player_address | Coins, last_coin_claim_block, current_prestige, is_prime_sentinel, total_runs, lifetime_score, best_run_score, current_layer, kernel_unlocks, selected_kernel, last_prime_sentinel_claim_block, mini_me_sessions_purchased, etc. |
+| **PlayerProfile** | player_address | Coins, last_coin_claim_block, current_prestige, is_prime_sentinel, total_runs, lifetime_score, best_run_score, current_layer, **highest_rank_id** (0 or 1..18), kernel_unlocks, selected_kernel, last_prime_sentinel_claim_block, mini_me_sessions_purchased, etc. |
 | **MiniMeInventory** | player_address, unit_type | count (0..20 per type). |
 | **LeaderboardEntry** | entry_id | Leaderboard rows; filter by week, sort by final_score. |
 | **GameEvent** | event_id | game_start (6), game_end (7); filter by run_id / player_address. |
 | **TokenPurchaseConfig** | owner | coin_exchange_rate, strk_token_address (for buy_coins UI). Rate can be set later via update_exchange_rate. |
 | **CoinShopGlobal** | global_key (0) | Shop owner; paused state may be on TokenPurchaseConfig. |
-| **RankNFT** | token_id | Rank achievement NFTs (owner, rank_tier, prestige, layer, achieved_at_block, run_id). |
+| **RankNFT** | owner, rank_id | One NFT per player per rank (rank_id 1..18). Fields: rank_id, rank_tier (1..5), prestige, layer, achieved_at_block, run_id, token_id (optional). Query by owner for badge_1..badge_18. |
 
 Torii model tags in the manifest follow `neon_sentinel-<ModelName>` (e.g. `neon_sentinel-PlayerProfile`). The GraphQL schema may expose them as camelCase or with different key names; always check the live schema.
 

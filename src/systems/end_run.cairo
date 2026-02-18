@@ -29,6 +29,7 @@ pub mod end_run {
     use super::{EVENT_TYPE_GAME_END, LEADERBOARD_MIN_SCORE, MAX_LAYER, SCORE_BONUS_COINS};
     use super::IEndRun;
     use neon_sentinel::models::{GameEvent, Player, PlayerProfile, RankNFT, RunState};
+    use neon_sentinel::rank_config::{rank_id_for_milestone, tier_for_rank};
 
     fn zero_u256() -> u256 {
         u256 { low: 0, high: 0 }
@@ -125,26 +126,33 @@ pub mod end_run {
                 }
             }
 
-            // 5b. Rank NFT: mint when player reaches a new rank tier (prestige*6 + layer-1)
-            let tier: u8 = run_state.current_prestige * 6 + (final_layer - 1);
-            if tier > profile.highest_rank_tier_minted {
-                let block_128: u128 = block_number.try_into().unwrap();
-                let tier_128: u128 = tier.into();
-                let token_id = u256 {
-                    low: run_id.low + block_128,
-                    high: run_id.high + tier_128,
-                };
-                let rank_nft = RankNFT {
-                    token_id,
-                    owner: caller,
-                    rank_tier: tier,
-                    prestige: run_state.current_prestige,
-                    layer: final_layer,
-                    achieved_at_block: block_number,
-                    run_id,
-                };
-                world.write_model(@rank_nft);
-                profile.highest_rank_tier_minted = tier;
+            // 5b. Rank (18 named ranks): update highest_rank_id and mint RankNFT when player first achieves this rank
+            let rank_id = rank_id_for_milestone(run_state.current_prestige, final_layer);
+            if rank_id > 0 && rank_id > profile.highest_rank_id {
+                profile.highest_rank_id = rank_id;
+                profile.highest_rank_tier_minted = rank_id;
+            }
+            if rank_id > 0 {
+                let existing: RankNFT = world.read_model((caller, rank_id));
+                if existing.achieved_at_block == 0 {
+                    let rank_tier_display = tier_for_rank(rank_id);
+                    let rank_128: u128 = rank_id.try_into().unwrap();
+                    let token_id = u256 {
+                        low: rank_128 + run_id.low * 256,
+                        high: run_id.high,
+                    };
+                    let rank_nft = RankNFT {
+                        owner: caller,
+                        rank_id,
+                        rank_tier: rank_tier_display,
+                        prestige: run_state.current_prestige,
+                        layer: final_layer,
+                        achieved_at_block: block_number,
+                        run_id,
+                        token_id,
+                    };
+                    world.write_model(@rank_nft);
+                }
             }
 
             // 6. Emit GameEvent for game over
