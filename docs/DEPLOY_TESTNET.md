@@ -186,7 +186,10 @@ If you are building a client that queries world state or events, run a **Torii**
    slot deployments create neon-sentinel-sepolia torii --config torii_sepolia.toml --version v1.8.0
    ```
 
-4. Save the endpoints Slot prints; your client will use them for GraphQL/subscriptions.
+4. **Current Torii endpoints** (service name `neon-sentinel-sepolia`):
+   - **Torii base:** `https://api.cartridge.gg/x/neon-sentinel-sepolia/torii`
+   - **GraphQL:** `https://api.cartridge.gg/x/neon-sentinel-sepolia/torii/graphql`
+   - **Stream logs:** `slot deployments logs neon-sentinel-sepolia torii -f`
 
 5. **After a redeploy:** If you upgraded the world (new models or schema), recreate the Torii deployment so the indexer uses the new schema:
    ```bash

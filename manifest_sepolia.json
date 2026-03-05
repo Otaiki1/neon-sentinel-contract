@@ -1,8 +1,8 @@
 {
   "world": {
     "class_hash": "0x613551abceb2b37073b1149bb862ea70cf029981ce1ca47e9dd7c7ab97cb65d",
-    "address": "0x4fa7aba1a6f464a1bd73728e1d1c14f60d8099c606ac993d6af27c0ce82e0c1",
-    "seed": "neon_sentinel_sepolia_bal_v2",
+    "address": "0x7bcbeb6104a77c6c90d7285ba06c2623454a38b501554c0d1645013fe610fc1",
+    "seed": "neon_sentinel_sepolia_bal_v3",
     "name": "Neon Sentinel",
     "entrypoints": [
       "uuid",
@@ -33,7 +33,7 @@
   },
   "contracts": [
     {
-      "address": "0xe00343a1465ce60216103c8c24a1428aed9ccb6874c2bcfc6226042b050831",
+      "address": "0x11501c9707e5d8e11be1ea2382593aca835680687a589b56a8b737aea62e11d",
       "class_hash": "0x1faaa896c5eca6aa3085c597795bd2ea89f6dc035ea4a9933df78bc5c416a00",
       "init_calldata": [],
       "tag": "neon_sentinel-actions",
@@ -45,8 +45,8 @@
       ]
     },
     {
-      "address": "0x66c2f66463c5d92b43f6c204e6f3a9cc9b52f411d6cc20d9f2566eb5af27207",
-      "class_hash": "0x680d3f7431a3403bce9943948dcbbaa7cb7d82aea68a16feb6de3ce63574453",
+      "address": "0x23fcb5bfa687c332a012898cb916559e54b4e56e83ccfd3c7f5aa1d83614b25",
+      "class_hash": "0x3a7ce57d50458fed894a3374e36586f06f11108937a6162edbe76811dfb75fc",
       "init_calldata": [],
       "tag": "neon_sentinel-buy_coins",
       "selector": "0x71b89c0559c727e8a0b942ad2018f1af058abca0807156510b8f7bb7486e725",
@@ -61,8 +61,8 @@
       ]
     },
     {
-      "address": "0x77b6c7ba126988a1109cb0b6188d978a419bd77adcb3278f4b6934f4ae32b7a",
-      "class_hash": "0x580c6eb9d6ad7ae9cc1d0392c5597d193439ada763cffce9039cdafe451e1b6",
+      "address": "0x2210b7fe00d1366551f5cb70b0c8a5605a631a08f3a152838be22b288769afa",
+      "class_hash": "0x7f3c641658ce31ed286c7cb530bbfd591f2a8085c4654c17fb8e6eb85ba2a88",
       "init_calldata": [],
       "tag": "neon_sentinel-claim_coins",
       "selector": "0x607365412e560d61876a913bfd807f1d13735699ddec61fb2a7469c839cc9f3",
@@ -72,8 +72,8 @@
       ]
     },
     {
-      "address": "0x1fa4bbc70303e98fa88dbcb147571387fd139ca949a126fbf95d57b7e82def7",
-      "class_hash": "0x4c9abd0bda775e9220f92321623ab47e23a1fddea113bfb98a8ad239b1aaeea",
+      "address": "0x75e9efe4e27dcfd10c92d30971b6fddc67ee5778a6af6917bf0f7f3f864d601",
+      "class_hash": "0x6e8d6269b1c52b309eb0ee0881c2a7f089628faf145594b8a624af527b9c50e",
       "init_calldata": [],
       "tag": "neon_sentinel-end_run",
       "selector": "0x3fe142a485720de89e3ec7f413332dab897652d4e5b639509bdd5b35514a6eb",
@@ -83,8 +83,8 @@
       ]
     },
     {
-      "address": "0x23ce7035b962d84a899d463eadddfdee28bf05b9a35fb331b6afc436aab0f6",
-      "class_hash": "0x7b79166a2d5f5ec9f0184f379eed9487889727f282e80299b1e812a51d37df8",
+      "address": "0x7bfc2d91139c0cf95a9b9aeb45be1be5b7da241c2018751b8a4b1b6b4f75a12",
+      "class_hash": "0xd5c8860ff0f429879d3bf2896517f60a0b297bfd00c133e9b5b04554a4024a",
       "init_calldata": [],
       "tag": "neon_sentinel-init_game",
       "selector": "0x3dd8e0d2edb68c1b6fa11ef2ea5bcd27a13dc7cfef097ac68ca57ce74871c54",
@@ -94,8 +94,8 @@
       ]
     },
     {
-      "address": "0x2c9a4672b4b373983b261c0cf3bbcd51ef81557ba6f9a6589f9608699f6a2f1",
-      "class_hash": "0x7726d0dc5a827d0fc464bb3c264b422e29b969bc4088c35e10e0489e86edf7d",
+      "address": "0x277f33969e42034733631eff574b58e6c30937436b143eaf9b5f0c6539e593e",
+      "class_hash": "0x2e34eb6e8c5008e1f96fb0a9873c70214f6e96e00b78d0c9e6a3810f41c40d3",
       "init_calldata": [],
       "tag": "neon_sentinel-initialize_coin_shop",
       "selector": "0x55702fff477c27b7b34fb2e5be17e8cf7db096e3a36d1e53f33d832f7e4b48e",
@@ -105,7 +105,7 @@
       ]
     },
     {
-      "address": "0x159731ccb1308dc67def4d2e61cc47cf926f31a87bd6505f1bf0b80f8095ce4",
+      "address": "0x67b851cb77204d51d819d90a305f0de074cb0842dd23e6c9faa95484c69de8",
       "class_hash": "0x48cb4c11f9bf03c9158d8bc30e82c2b253be0ffa1baeb1933176fa87eb4eb02",
       "init_calldata": [],
       "tag": "neon_sentinel-pause_unpause_purchasing",
@@ -116,8 +116,8 @@
       ]
     },
     {
-      "address": "0x38de7851f08453c80a8e45de6c5b117b6aa0080ae553f79780523b7a982af29",
-      "class_hash": "0x1b8631f336e61764b513872137ba2fb24df7be8e82b720e83cd008fd7fa96b5",
+      "address": "0x1eea8a9d7fce403f9ecf491e0cc0682b6b3617f23edb98f746bf996e43b0949",
+      "class_hash": "0x666dec57ba6f450ae652f2bf781c955fcc1d304f1554718a15ffce02c44b4e1",
       "init_calldata": [],
       "tag": "neon_sentinel-purchase_cosmetic",
       "selector": "0x5d7b91b27846c4dea267ccf31132e8a2b1b20a34ff2061cf41378707f16ab37",
@@ -127,8 +127,30 @@
       ]
     },
     {
-      "address": "0x72f707e406978dbbeb046004325002156afc04a8787ee23d85dc37cffe7e333",
-      "class_hash": "0xd7a1487b1141e203f01d3b52add88a471671d5db698dbdb92b73c3e5494b2d",
+      "address": "0x6d51b77216ea946c0d33cba1667fe7b23130c12387c01429324a79bc1aee8c0",
+      "class_hash": "0x73c6a030bbe1875b8c062b787a4cfa4ea297f6a26229621d1d938ac5f2b0f73",
+      "init_calldata": [],
+      "tag": "neon_sentinel-purchase_mini_me_sessions",
+      "selector": "0x7ce27c8dad985f916abecd4ffd34e2e74ddeb3cb2b9bb6957af0a8b99a8ada2",
+      "systems": [
+        "purchase_mini_me_sessions",
+        "upgrade"
+      ]
+    },
+    {
+      "address": "0x23f7c4b3be610071961e3b78e49d79bab439e36952fad9ef3eda72ff4254ded",
+      "class_hash": "0x75e5d07dd158a4df0afb55812f5ce4b72e0892593276b6869451a4c1bee26a6",
+      "init_calldata": [],
+      "tag": "neon_sentinel-purchase_mini_me_unit",
+      "selector": "0x3282da829b101dd3b94264f1a9d7721281c0ca96a06b36815acb11d9436d0a2",
+      "systems": [
+        "purchase_mini_me_unit",
+        "upgrade"
+      ]
+    },
+    {
+      "address": "0x393939f3fb43e93c2f3af3a0c7a0c0a1d76677d6c66afd8437afe246870f05f",
+      "class_hash": "0x221ed44d0c9500799c64cd04a419d65f2fc6a0b5c1b4e4b05c972487fa37241",
       "init_calldata": [],
       "tag": "neon_sentinel-spend_coins",
       "selector": "0x32459b01f05578bddca8031c0051d71163b8060767a3d82106b4442475d42e",
@@ -138,8 +160,19 @@
       ]
     },
     {
-      "address": "0x60c1412d8b151fb0e048ecbb9fe6ef098b1d342ea6b5337d1ad159c769c26c2",
-      "class_hash": "0x4d0d48d4231080f72b049226625017659aa83304383ddb3eae0b4e6a3bdce20",
+      "address": "0xf9043a3cdd3ceb402fe33b459efe0566008a5680ef2e96fa74414b8063556b",
+      "class_hash": "0xdfc0648c0e2a154981cf51e748beb2fa49ec047a3f6cbeedc88cf3cbfb89e8",
+      "init_calldata": [],
+      "tag": "neon_sentinel-spend_revive",
+      "selector": "0x444590022ab6d01d3f331b5ea5ee1eaaba7795a638e533db027686ceacc3a36",
+      "systems": [
+        "spend_revive",
+        "upgrade"
+      ]
+    },
+    {
+      "address": "0x7511c7a0575ad7533a1f93c46039ac1956a538223828b49928a3da567d81dc1",
+      "class_hash": "0x4f752242d18f064390133e54174109efc1305faff726eb423a76be7b41b49ef",
       "init_calldata": [],
       "tag": "neon_sentinel-submit_leaderboard",
       "selector": "0x3192fb449fc2beeeec0219ae887d53738bef5e1643948a7d058efe5939a07",
@@ -149,8 +182,8 @@
       ]
     },
     {
-      "address": "0x76e70704f6cb3ce06e528e1393b6a3407d47ec5502543d453aba2937a12f851",
-      "class_hash": "0x66792cd4b86cf6958d9b54519f20b218a95def1cee52fd0f8692a0051c5de48",
+      "address": "0x7d447b7cfd026b8f52f42197d9c0f6a1de286c05d10f423a36ab82e9f6c679",
+      "class_hash": "0x108a94b02c17acd6c3d48a9f42f714f65a38f5769a002ec02f0c17e99244959",
       "init_calldata": [],
       "tag": "neon_sentinel-update_exchange_rate",
       "selector": "0x5a8901ebdd36d2578d2d8e789ca2c50be6089bfe2eca4961179b632b52541e6",
@@ -646,6 +679,28 @@
     {
       "members": [
         {
+          "name": "player_address",
+          "type": "core::starknet::contract_address::ContractAddress",
+          "key": true
+        },
+        {
+          "name": "unit_type",
+          "type": "core::integer::u8",
+          "key": true
+        },
+        {
+          "name": "count",
+          "type": "core::integer::u8",
+          "key": false
+        }
+      ],
+      "class_hash": "0x3113911e76a99fd669452d155420600b240b3597ef34ef7533e1429375fcc27",
+      "tag": "neon_sentinel-MiniMeInventory",
+      "selector": "0x7a30311370f1cb24c42039123e217d3f4be35d314d8ce363546c353da719f38"
+    },
+    {
+      "members": [
+        {
           "name": "player",
           "type": "core::starknet::contract_address::ContractAddress",
           "key": true
@@ -878,9 +933,24 @@
           "name": "highest_rank_tier_minted",
           "type": "core::integer::u8",
           "key": false
+        },
+        {
+          "name": "highest_rank_id",
+          "type": "core::integer::u8",
+          "key": false
+        },
+        {
+          "name": "last_prime_sentinel_claim_block",
+          "type": "core::integer::u64",
+          "key": false
+        },
+        {
+          "name": "mini_me_sessions_purchased",
+          "type": "core::integer::u32",
+          "key": false
         }
       ],
-      "class_hash": "0x46a666df3a12fd8cb54ccc2483470ae1e74556c73ff2179ba34e9479287ad0a",
+      "class_hash": "0xa6e43fea2b1a65f7692ebffb156a6d9b85fe0c5a618015e92a940464d485a6",
       "tag": "neon_sentinel-PlayerProfile",
       "selector": "0x718f29799a183a770ae0710cf3276ab9591c24cb105cc9cdc7425648590e048"
     },
@@ -921,14 +991,14 @@
     {
       "members": [
         {
-          "name": "token_id",
-          "type": "core::integer::u256",
+          "name": "owner",
+          "type": "core::starknet::contract_address::ContractAddress",
           "key": true
         },
         {
-          "name": "owner",
-          "type": "core::starknet::contract_address::ContractAddress",
-          "key": false
+          "name": "rank_id",
+          "type": "core::integer::u8",
+          "key": true
         },
         {
           "name": "rank_tier",
@@ -954,9 +1024,14 @@
           "name": "run_id",
           "type": "core::integer::u256",
           "key": false
+        },
+        {
+          "name": "token_id",
+          "type": "core::integer::u256",
+          "key": false
         }
       ],
-      "class_hash": "0x3472f45879304bd41f6f520793c2d98820da7f507b1a9d03a838950b10e18eb",
+      "class_hash": "0x3dc20467e077f887b84c45e6521d143cc42c4c86fd872305dabb4b5c908b787",
       "tag": "neon_sentinel-RankNFT",
       "selector": "0x69d5d4335bc24758cb4eaae868189e5eba8f2d52db7ec8ad0b819c52ab5239f"
     },
@@ -1061,9 +1136,14 @@
           "name": "pregame_upgrades_mask",
           "type": "core::integer::u256",
           "key": false
+        },
+        {
+          "name": "revive_count",
+          "type": "core::integer::u32",
+          "key": false
         }
       ],
-      "class_hash": "0x42fd3d42f9493db604aeabe15c2c5bd43efb776053e3d63735538967bb03784",
+      "class_hash": "0x69943ea0552120be383191dedcc057622b2277c96081ad85809fe85be2d784",
       "tag": "neon_sentinel-RunState",
       "selector": "0x7ef404f5a5743347d3e1a1dba6192b8fd882177a90915fb4c52275bb7e87f47"
     },
@@ -1348,6 +1428,55 @@
           "key": true
         },
         {
+          "name": "sessions_purchased_after",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "block_number",
+          "type": "core::integer::u64",
+          "key": false
+        }
+      ],
+      "class_hash": "0x2abcb4fdbe18f92257fa16c6c37f0ecbbb38fa611b95aac6bb2406717f2a9fa",
+      "tag": "neon_sentinel-MiniMeSessionsPurchased",
+      "selector": "0x5c34d105fa71c1d068e751a84018476895f62a281698808a7ea04c2c0526193"
+    },
+    {
+      "members": [
+        {
+          "name": "player",
+          "type": "core::starknet::contract_address::ContractAddress",
+          "key": true
+        },
+        {
+          "name": "unit_type",
+          "type": "core::integer::u8",
+          "key": false
+        },
+        {
+          "name": "count_after",
+          "type": "core::integer::u8",
+          "key": false
+        },
+        {
+          "name": "block_number",
+          "type": "core::integer::u64",
+          "key": false
+        }
+      ],
+      "class_hash": "0xe307a550fa9cdda4fa37d721b27df627c23cb59c8ee76f3beea58b85c599d5",
+      "tag": "neon_sentinel-MiniMeUnitPurchased",
+      "selector": "0x6938566290d29672b625cc8ef984e50dc5e6f3b946ed82010f736e85d204261"
+    },
+    {
+      "members": [
+        {
+          "name": "player",
+          "type": "core::starknet::contract_address::ContractAddress",
+          "key": true
+        },
+        {
           "name": "direction",
           "type": "neon_sentinel::models::Direction",
           "key": false
@@ -1378,6 +1507,38 @@
       "class_hash": "0x5aa05bbb14da7efe60956a33ee855990d67994cf2a080f84b4ea9830f60c00e",
       "tag": "neon_sentinel-PurchasingPauseToggled",
       "selector": "0x7ce6e97fb4632ac8950ad0949c42c39c720b36fe7c02d9a9cbbfa3d4800d4ba"
+    },
+    {
+      "members": [
+        {
+          "name": "player",
+          "type": "core::starknet::contract_address::ContractAddress",
+          "key": true
+        },
+        {
+          "name": "run_id",
+          "type": "core::integer::u256",
+          "key": false
+        },
+        {
+          "name": "revive_count_after",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "cost",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "block_number",
+          "type": "core::integer::u64",
+          "key": false
+        }
+      ],
+      "class_hash": "0x729ffeba709059b27dce9023d93f4ad39879eeb902972f378c269d6cc1ba9e7",
+      "tag": "neon_sentinel-RevivePurchased",
+      "selector": "0x5a9b2ea7a9f9440deb4d30341c4b11dc3b1db32369328d038b0d5ba3d7752d9"
     },
     {
       "members": [
@@ -4107,6 +4268,34 @@
     },
     {
       "type": "struct",
+      "name": "neon_sentinel::models::MiniMeInventory",
+      "members": [
+        {
+          "name": "player_address",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "name": "unit_type",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "count",
+          "type": "core::integer::u8"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "neon_sentinel::models::MiniMeInventoryValue",
+      "members": [
+        {
+          "name": "count",
+          "type": "core::integer::u8"
+        }
+      ]
+    },
+    {
+      "type": "struct",
       "name": "neon_sentinel::models::Moves",
       "members": [
         {
@@ -4314,6 +4503,18 @@
         {
           "name": "highest_rank_tier_minted",
           "type": "core::integer::u8"
+        },
+        {
+          "name": "highest_rank_id",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "last_prime_sentinel_claim_block",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "mini_me_sessions_purchased",
+          "type": "core::integer::u32"
         }
       ]
     },
@@ -4408,6 +4609,18 @@
         {
           "name": "highest_rank_tier_minted",
           "type": "core::integer::u8"
+        },
+        {
+          "name": "highest_rank_id",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "last_prime_sentinel_claim_block",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "mini_me_sessions_purchased",
+          "type": "core::integer::u32"
         }
       ]
     },
@@ -4534,12 +4747,12 @@
       "name": "neon_sentinel::models::RankNFT",
       "members": [
         {
-          "name": "token_id",
-          "type": "core::integer::u256"
-        },
-        {
           "name": "owner",
           "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "name": "rank_id",
+          "type": "core::integer::u8"
         },
         {
           "name": "rank_tier",
@@ -4559,6 +4772,10 @@
         },
         {
           "name": "run_id",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "token_id",
           "type": "core::integer::u256"
         }
       ]
@@ -4568,10 +4785,6 @@
       "name": "neon_sentinel::models::RankNFTValue",
       "members": [
         {
-          "name": "owner",
-          "type": "core::starknet::contract_address::ContractAddress"
-        },
-        {
           "name": "rank_tier",
           "type": "core::integer::u8"
         },
@@ -4589,6 +4802,10 @@
         },
         {
           "name": "run_id",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "token_id",
           "type": "core::integer::u256"
         }
       ]
@@ -4676,6 +4893,10 @@
         {
           "name": "pregame_upgrades_mask",
           "type": "core::integer::u256"
+        },
+        {
+          "name": "revive_count",
+          "type": "core::integer::u32"
         }
       ]
     },
@@ -4754,6 +4975,10 @@
         {
           "name": "pregame_upgrades_mask",
           "type": "core::integer::u256"
+        },
+        {
+          "name": "revive_count",
+          "type": "core::integer::u32"
         }
       ]
     },
@@ -4989,6 +5214,12 @@
     },
     {
       "type": "event",
+      "name": "neon_sentinel::models::m_MiniMeInventory::Event",
+      "kind": "enum",
+      "variants": []
+    },
+    {
+      "type": "event",
       "name": "neon_sentinel::models::m_Moves::Event",
       "kind": "enum",
       "variants": []
@@ -5123,10 +5354,6 @@
           "inputs": [
             {
               "name": "amount_strk",
-              "type": "core::integer::u256"
-            },
-            {
-              "name": "max_coins_expected",
               "type": "core::integer::u256"
             }
           ],
@@ -5874,6 +6101,155 @@
     },
     {
       "type": "interface",
+      "name": "neon_sentinel::systems::purchase_mini_me_sessions::IPurchaseMiniMeSessions",
+      "items": [
+        {
+          "type": "function",
+          "name": "purchase_mini_me_sessions",
+          "inputs": [],
+          "outputs": [],
+          "state_mutability": "external"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "neon_sentinel::systems::purchase_mini_me_sessions::purchase_mini_me_sessions::Event",
+      "kind": "enum",
+      "variants": [
+        {
+          "name": "UpgradeableEvent",
+          "type": "dojo::contract::components::upgradeable::upgradeable_cpt::Event",
+          "kind": "nested"
+        },
+        {
+          "name": "WorldProviderEvent",
+          "type": "dojo::contract::components::world_provider::world_provider_cpt::Event",
+          "kind": "nested"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "neon_sentinel::systems::purchase_mini_me_sessions::purchase_mini_me_sessions::MiniMeSessionsPurchased",
+      "members": [
+        {
+          "name": "player",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "name": "sessions_purchased_after",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "block_number",
+          "type": "core::integer::u64"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "neon_sentinel::systems::purchase_mini_me_sessions::purchase_mini_me_sessions::MiniMeSessionsPurchasedValue",
+      "members": [
+        {
+          "name": "sessions_purchased_after",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "block_number",
+          "type": "core::integer::u64"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "neon_sentinel::systems::purchase_mini_me_sessions::purchase_mini_me_sessions::e_MiniMeSessionsPurchased::Event",
+      "kind": "enum",
+      "variants": []
+    },
+    {
+      "type": "interface",
+      "name": "neon_sentinel::systems::purchase_mini_me_unit::IPurchaseMiniMeUnit",
+      "items": [
+        {
+          "type": "function",
+          "name": "purchase_mini_me_unit",
+          "inputs": [
+            {
+              "name": "unit_type",
+              "type": "core::integer::u8"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "neon_sentinel::systems::purchase_mini_me_unit::purchase_mini_me_unit::Event",
+      "kind": "enum",
+      "variants": [
+        {
+          "name": "UpgradeableEvent",
+          "type": "dojo::contract::components::upgradeable::upgradeable_cpt::Event",
+          "kind": "nested"
+        },
+        {
+          "name": "WorldProviderEvent",
+          "type": "dojo::contract::components::world_provider::world_provider_cpt::Event",
+          "kind": "nested"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "neon_sentinel::systems::purchase_mini_me_unit::purchase_mini_me_unit::MiniMeUnitPurchased",
+      "members": [
+        {
+          "name": "player",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "name": "unit_type",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "count_after",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "block_number",
+          "type": "core::integer::u64"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "neon_sentinel::systems::purchase_mini_me_unit::purchase_mini_me_unit::MiniMeUnitPurchasedValue",
+      "members": [
+        {
+          "name": "unit_type",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "count_after",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "block_number",
+          "type": "core::integer::u64"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "neon_sentinel::systems::purchase_mini_me_unit::purchase_mini_me_unit::e_MiniMeUnitPurchased::Event",
+      "kind": "enum",
+      "variants": []
+    },
+    {
+      "type": "interface",
       "name": "neon_sentinel::systems::spend_coins::ISpendCoins",
       "items": [
         {
@@ -5914,6 +6290,95 @@
           "kind": "nested"
         }
       ]
+    },
+    {
+      "type": "interface",
+      "name": "neon_sentinel::systems::spend_revive::ISpendRevive",
+      "items": [
+        {
+          "type": "function",
+          "name": "spend_revive",
+          "inputs": [
+            {
+              "name": "run_id",
+              "type": "core::integer::u256"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "neon_sentinel::systems::spend_revive::spend_revive::Event",
+      "kind": "enum",
+      "variants": [
+        {
+          "name": "UpgradeableEvent",
+          "type": "dojo::contract::components::upgradeable::upgradeable_cpt::Event",
+          "kind": "nested"
+        },
+        {
+          "name": "WorldProviderEvent",
+          "type": "dojo::contract::components::world_provider::world_provider_cpt::Event",
+          "kind": "nested"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "neon_sentinel::systems::spend_revive::spend_revive::RevivePurchased",
+      "members": [
+        {
+          "name": "player",
+          "type": "core::starknet::contract_address::ContractAddress"
+        },
+        {
+          "name": "run_id",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "revive_count_after",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "cost",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "block_number",
+          "type": "core::integer::u64"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "neon_sentinel::systems::spend_revive::spend_revive::RevivePurchasedValue",
+      "members": [
+        {
+          "name": "run_id",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "revive_count_after",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "cost",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "block_number",
+          "type": "core::integer::u64"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "neon_sentinel::systems::spend_revive::spend_revive::e_RevivePurchased::Event",
+      "kind": "enum",
+      "variants": []
     },
     {
       "type": "interface",

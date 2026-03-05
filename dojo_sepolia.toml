@@ -8,8 +8,8 @@ description = "Neon Sentinel — a Dojo Autonomous World."
 cover_uri = "file://assets/cover.png"
 icon_uri = "file://assets/icon.png"
 website = "https://github.com/dojoengine/neon-sentinel-dojo"
-# Use a unique seed per deployment. Max 31 chars (Starknet short string limit). If "seed refers to a deployed world", change to get a new world.
-seed = "neon_sentinel_sepolia_bal_v2"
+# Use a unique seed per deployment. Max 31 chars (Starknet short string limit). Changed for fresh world (RankNFT schema not upgradeable).
+seed = "neon_sentinel_sepolia_bal_v3"
 
 [world.socials]
 x = "https://x.com/ohayo_dojo"
@@ -28,9 +28,9 @@ default = "neon_sentinel"
 rpc_url = ""         # or env: STARKNET_RPC_URL
 account_address = "" # or env: DOJO_ACCOUNT_ADDRESS
 private_key = ""     # or env: DOJO_PRIVATE_KEY
-# Redeploy: keep this as the existing world address so migrate upgrades it.
-# Fresh deploy: set to "0", then after first successful migrate set to the printed world address.
-world_address = "0x04fa7aba1a6f464a1bd73728e1d1c14f60d8099c606ac993d6af27c0ce82e0c1"
+# Fresh deploy: set to "0". After first successful migrate, set this to the printed world address.
+# Redeploy (upgrade): set to existing world address to upgrade that world.
+world_address = "0x07bcbeb6104a77c6c90d7285ba06c2623454a38b501554c0d1645013fe610fc1"
 
 [writers]
 "neon_sentinel" = ["neon_sentinel-actions", "neon_sentinel-buy_coins", "neon_sentinel-claim_coins", "neon_sentinel-end_run", "neon_sentinel-init_game", "neon_sentinel-initialize_coin_shop", "neon_sentinel-pause_unpause_purchasing", "neon_sentinel-purchase_cosmetic", "neon_sentinel-purchase_mini_me_sessions", "neon_sentinel-purchase_mini_me_unit", "neon_sentinel-spend_coins", "neon_sentinel-spend_revive", "neon_sentinel-submit_leaderboard", "neon_sentinel-update_exchange_rate"]
