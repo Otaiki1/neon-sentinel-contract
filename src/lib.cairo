@@ -13,11 +13,16 @@ pub mod systems {
     pub mod spend_revive;
     pub mod submit_leaderboard;
     pub mod update_exchange_rate;
+    // Optional robust systems for on-chain simulation
+    pub mod player_movement;
+    pub mod enemy_manager;
+    pub mod game_tick;
 }
 
 pub mod coin_shop_config;
 pub mod erc20;
 pub mod rank_config;
+pub mod rank_nft_contract;
 pub mod models;
 pub mod owner_access;
 pub mod token_validation;

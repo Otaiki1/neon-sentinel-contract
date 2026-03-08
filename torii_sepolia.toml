@@ -6,3 +6,5 @@ start_block = 6659071
 index_pending = true
 index_transactions = true
 polling_interval = 1000
+# TODO: replace with actual rank_nft_contract address after `sozo -P sepolia migrate`
+# contracts = ["ERC721:0x<RANK_NFT_CONTRACT_ADDRESS>"]
