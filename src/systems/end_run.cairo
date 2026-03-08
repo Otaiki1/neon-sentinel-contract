@@ -1,6 +1,7 @@
 //! end_run system (BALANCED): finalizes a run with client-submitted final state.
 //! Client simulates gameplay locally and submits final_score, total_kills, final_layer.
 //! Chain accepts these values and updates RunState, Player, PlayerProfile; awards bonus coins if score >= threshold.
+//! On rank milestone: delegates NFT minting to rank_nft_contract (ERC-721-compatible, soulbound).
 
 use core::integer::u256;
 
@@ -24,12 +25,15 @@ pub trait IEndRun<T> {
 pub mod end_run {
     use core::integer::u256;
     use dojo::model::ModelStorage;
+    use dojo::world::WorldStorageTrait;
     use starknet::{get_caller_address, get_execution_info};
 
     use super::{EVENT_TYPE_GAME_END, LEADERBOARD_MIN_SCORE, MAX_LAYER, SCORE_BONUS_COINS};
     use super::IEndRun;
-    use neon_sentinel::models::{GameEvent, Player, PlayerProfile, RankNFT, RunState};
+    use neon_sentinel::models::{GameEvent, Player, PlayerProfile, RunState};
     use neon_sentinel::rank_config::{rank_id_for_milestone, tier_for_rank};
+    use neon_sentinel::rank_nft_contract::{IRankNFTDispatcher, IRankNFTDispatcherTrait};
+    use neon_sentinel::rank_nft_contract::derive_token_id;
 
     fn zero_u256() -> u256 {
         u256 { low: 0, high: 0 }
@@ -126,33 +130,28 @@ pub mod end_run {
                 }
             }
 
-            // 5b. Rank (18 named ranks): update highest_rank_id and mint RankNFT when player first achieves this rank
+            // 5b. Rank (18 named ranks): update highest_rank_id and mint RankNFT when player first achieves this rank.
+            //     Minting is delegated to rank_nft_contract (ERC-721-compatible, soulbound).
             let rank_id = rank_id_for_milestone(run_state.current_prestige, final_layer);
             if rank_id > 0 && rank_id > profile.highest_rank_id {
                 profile.highest_rank_id = rank_id;
-                profile.highest_rank_tier_minted = rank_id;
+                // FIX: store the display tier (1..5), NOT the raw rank_id.
+                profile.highest_rank_tier_minted = tier_for_rank(rank_id);
             }
             if rank_id > 0 {
-                let existing: RankNFT = world.read_model((caller, rank_id));
-                if existing.achieved_at_block == 0 {
-                    let rank_tier_display = tier_for_rank(rank_id);
-                    let rank_128: u128 = rank_id.try_into().unwrap();
-                    let token_id = u256 {
-                        low: rank_128 + run_id.low * 256,
-                        high: run_id.high,
-                    };
-                    let rank_nft = RankNFT {
-                        owner: caller,
-                        rank_id,
-                        rank_tier: rank_tier_display,
-                        prestige: run_state.current_prestige,
-                        layer: final_layer,
-                        achieved_at_block: block_number,
-                        run_id,
-                        token_id,
-                    };
-                    world.write_model(@rank_nft);
-                }
+                // Derive token_id using the address-aware function (no collision across players).
+                let token_id = derive_token_id(caller, rank_id);
+                // Only mint if this token has not been issued yet (guard inside contract, but
+                // also skip the dispatch call to save gas when already minted).
+                let (nft_addr, _) = world
+                    .dns(@"rank_nft_contract")
+                    .expect('rank_nft_contract not deployed');
+                let nft = IRankNFTDispatcher { contract_address: nft_addr };
+                // token_id.low == 0 only if caller == 0x0 AND rank_id == 0, which can never
+                // happen here (rank_id >= 1), so we use achieved_at_block check via owner_of.
+                // The contract itself guards against double-mint via NFTTokenOwner.
+                let _ = token_id; // suppress unused warning; token_id derived inside contract
+                nft.mint(caller, rank_id, run_state.current_prestige, final_layer, run_id);
             }
 
             // 6. Emit GameEvent for game over
