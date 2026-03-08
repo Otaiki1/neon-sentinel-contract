@@ -90,6 +90,10 @@ pub struct RunState {
     pub final_score: u64,
     pub final_layer: u8,
     pub submitted_to_leaderboard: bool,
+    /// Attestation: which pregame upgrades were used for this run (set at start_run).
+    pub pregame_upgrades_mask: u256,
+    /// Number of revives used this run; cost = 100 * 2^revive_count.
+    pub revive_count: u32,
 }
 
 /// Enemy instance. SECURITY: position is server-calculated; spawn/destroy use block time;
@@ -218,6 +222,32 @@ pub struct PlayerProfile {
     pub cosmetic_unlocks: u64,
     pub last_profile_update_block: u64,
     pub profile_hash: u256,
+    /// Highest rank tier (prestige*6 + layer-1) for which a RankNFT was minted; kept in sync with highest_rank_id.
+    pub highest_rank_tier_minted: u8,
+    /// Highest of 18 named ranks achieved (1..18); 0 = none. Displayed rank source of truth.
+    pub highest_rank_id: u8,
+    /// Last block at which Prime Sentinel daily bonus was claimed (3 coins once per 7200 blocks).
+    pub last_prime_sentinel_claim_block: u64,
+    /// Number of Mini-Me session packs purchased (+3 sessions each); capacity = 3 + this*3.
+    pub mini_me_sessions_purchased: u32,
+}
+
+/// Rank achievement NFT (soulbound). One per (owner, rank_id); minted when player first achieves that rank (1..18).
+#[derive(Copy, Drop, Serde, Debug)]
+#[dojo::model]
+pub struct RankNFT {
+    #[key]
+    pub owner: ContractAddress,
+    #[key]
+    pub rank_id: u8,
+    /// Display tier 1..5 (entry, intermediate, advanced, elite, legendary).
+    pub rank_tier: u8,
+    pub prestige: u8,
+    pub layer: u8,
+    pub achieved_at_block: u64,
+    pub run_id: u256,
+    /// Deterministic token_id for external NFT indexing (derived from owner + rank_id).
+    pub token_id: u256,
 }
 
 // ============== Token purchase & treasury models ==============
@@ -278,6 +308,17 @@ pub struct CoinPurchaseHistory {
     pub last_purchase_block: u64,
     pub last_claimed_coins_block: u64,
     pub verified_purchases: u32,
+}
+
+/// Mini-Me companion inventory: per player, per unit type (0..6), count up to 20.
+#[derive(Copy, Drop, Serde, Debug)]
+#[dojo::model]
+pub struct MiniMeInventory {
+    #[key]
+    pub player_address: ContractAddress,
+    #[key]
+    pub unit_type: u8,
+    pub count: u8,
 }
 
 /// Owner withdrawal request. Audit trail for treasury management; status lifecycle.
@@ -551,6 +592,8 @@ mod tests {
             final_score: 0,
             final_layer: 0,
             submitted_to_leaderboard: false,
+            pregame_upgrades_mask: zero_u256(),
+            revive_count: 0,
         };
         assert(state.run_id.low == 42, 'run_id');
         assert(state.current_layer == 1, 'layer');
@@ -578,6 +621,8 @@ mod tests {
             final_score: 0,
             final_layer: 0,
             submitted_to_leaderboard: false,
+            pregame_upgrades_mask: zero_u256(),
+            revive_count: 0,
         };
         assert(state.score == 0, 'score');
         assert(state.total_ticks_processed == 0, 'total_ticks');
@@ -610,6 +655,8 @@ mod tests {
             final_score: 0,
             final_layer: 0,
             submitted_to_leaderboard: false,
+            pregame_upgrades_mask: zero_u256(),
+            revive_count: 0,
         };
         assert(state.is_finished == false, 'is_finished false');
     }

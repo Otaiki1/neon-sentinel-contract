@@ -102,6 +102,10 @@ mod tests {
             cosmetic_unlocks: 0,
             last_profile_update_block: 0,
             profile_hash: zero_u256(),
+            highest_rank_tier_minted: 0,
+            highest_rank_id: 0,
+            last_prime_sentinel_claim_block: 0,
+            mini_me_sessions_purchased: 0,
         };
         world.write_model_test(@profile);
 
@@ -213,8 +217,7 @@ mod tests {
         let (buy_addr, _) = world.dns(@"buy_coins").unwrap();
         let buy = IBuyCoinsDispatcher { contract_address: buy_addr };
         let ten = u256 { low: 10, high: 0 };
-        let fifty = u256 { low: 50, high: 0 };
-        buy.buy_coins(ten, fifty);
+        buy.buy_coins(ten);
     }
 
     #[test]
@@ -232,23 +235,7 @@ mod tests {
         let (buy_addr, _) = world.dns(@"buy_coins").unwrap();
         let buy = IBuyCoinsDispatcher { contract_address: buy_addr };
         let ten = u256 { low: 10, high: 0 };
-        let fifty = u256 { low: 50, high: 0 };
-        buy.buy_coins(ten, fifty);
-    }
-
-    #[test]
-    #[ignore]
-    #[available_gas(50000000)]
-    #[should_panic(expected: ('Expected coins mismatch',))]
-    fn test_buy_coins_rejects_wrong_max_coins_expected() {
-        set_block_number(900);
-        let (mut world, _caller) = setup_world_with_coin_shop(0x1.try_into().unwrap());
-
-        let (buy_addr, _) = world.dns(@"buy_coins").unwrap();
-        let buy = IBuyCoinsDispatcher { contract_address: buy_addr };
-        let ten = u256 { low: 10, high: 0 };
-        let wrong_coins = u256 { low: 99, high: 0 };
-        buy.buy_coins(ten, wrong_coins);
+        buy.buy_coins(ten);
     }
 
     // ============== Security: owner withdraw without STRK in contract fails ==============

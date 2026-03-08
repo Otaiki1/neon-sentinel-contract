@@ -3,7 +3,7 @@
 use starknet::ContractAddress;
 
 const MIN_EXCHANGE_RATE: u32 = 3;
-const MAX_EXCHANGE_RATE: u32 = 10;
+const MAX_EXCHANGE_RATE: u32 = 100;
 const ZERO_FELT: felt252 = 0;
 
 #[starknet::interface]

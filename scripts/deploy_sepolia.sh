@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
-# Deploy Neon Sentinel Dojo world to Starknet Sepolia testnet.
+# Deploy or redeploy Neon Sentinel Dojo world to Starknet Sepolia testnet.
+#
 # Prerequisites: .env.sepolia with STARKNET_RPC_URL, DOJO_ACCOUNT_ADDRESS, DOJO_PRIVATE_KEY
+# Optional: STRK_TOKEN_ADDRESS in .env.sepolia to initialize the coin shop (else only update_exchange_rate if shop exists).
+#
+# Redeploy (upgrade existing world): set world_address in dojo_sepolia.toml to the existing world address.
+# Fresh deploy: set world_address = "0" in dojo_sepolia.toml; after migrate, set it to the printed address.
+#
 # Usage: ./scripts/deploy_sepolia.sh
 
 set -e
@@ -21,6 +27,23 @@ log_debug() {
 }
 
 cd "$ROOT_DIR"
+
+# Remind about world_address for redeploy vs fresh
+WORLD_IN_CONFIG=$(grep -E '^world_address\s*=' dojo_sepolia.toml 2>/dev/null | sed -n 's/.*"\(.*\)".*/\1/p' || echo "")
+if [ -z "$WORLD_IN_CONFIG" ]; then
+  echo "Note: could not read world_address from dojo_sepolia.toml. For fresh deploy use \"0\"; for redeploy use existing world address."
+elif [ "$WORLD_IN_CONFIG" = "0" ]; then
+  echo "Fresh deploy: world_address is 0. A new world will be deployed."
+else
+  echo "Redeploy: world_address is set. Sozo will upgrade the existing world."
+fi
+echo ""
+
+# #region agent log
+# H1: sierra-replace-ids must be false for deterministic class hashes
+SIERRA_VAL=$(grep -E 'sierra-replace-ids' Scarb.toml 2>/dev/null | sed 's/.*=\s*//' | tr -d ' ' || echo "missing")
+printf '%s\n' "{\"timestamp\":$(date +%s)000,\"location\":\"deploy_sepolia.sh\",\"message\":\"Scarb.toml sierra-replace-ids\",\"data\":{\"sierra_replace_ids\":\"$SIERRA_VAL\"},\"hypothesisId\":\"H1\"}" >> "$DEBUG_LOG"
+# #endregion
 
 if [ -f "$ENV_FILE" ]; then
   echo "Loading environment variables from $ENV_FILE..."
@@ -43,8 +66,13 @@ cleanup_env() {
 trap cleanup_env EXIT
 
 # #region agent log
+# H3: existing world_address causes migrate to compare against chain state
 WORLD_ADDR=$(grep -E '^world_address\s*=' dojo_sepolia.toml 2>/dev/null | sed 's/.*=\s*"\(.*\)"/\1/' || echo "unknown")
-log_debug "deploy_sepolia start profile=sepolia" "H1" "world_address=$WORLD_ADDR"
+log_debug "deploy_sepolia start profile=sepolia" "H3" "world_address=$WORLD_ADDR"
+# H5: version drift can change compiled class hashes
+SCARB_VER=$(scarb --version 2>/dev/null | head -1 || echo "unknown")
+SOZO_VER=$(sozo --version 2>/dev/null | head -1 || echo "unknown")
+printf '%s\n' "{\"timestamp\":$(date +%s)000,\"location\":\"deploy_sepolia.sh\",\"message\":\"tool versions\",\"data\":{\"scarb\":\"$SCARB_VER\",\"sozo\":\"$SOZO_VER\"},\"hypothesisId\":\"H5\"}" >> "$DEBUG_LOG"
 # #endregion
 
 echo "Cleaning Sozo manifests and Scarb target (hypothesis H3: clean build)..."
@@ -60,20 +88,57 @@ log_debug "sozo build start" "H3" "\"step\":\"build\""
 # #endregion
 sozo -P sepolia build
 
+# #region agent log
+# H2/H4: manifest and target state after build (stale manifest or wrong profile?)
+TARGET_EXISTS="false"; [ -d "target" ] && TARGET_EXISTS="true"
+MANIFEST_FILES=$(find target -maxdepth 3 -name "*.json" 2>/dev/null | tr '\n' ',' || echo "none")
+SAMPLE_HASH="none"
+for m in target/manifest_sepolia.json manifest_sepolia.json target/dev/manifest.json; do
+  [ -f "$m" ] && SAMPLE_HASH=$(grep -o '"class_hash":\s*"0x[0-9a-f]*"' "$m" 2>/dev/null | head -1 | sed 's/.*"0x/0x/' | sed 's/".*//') && break
+done
+printf '%s\n' "{\"timestamp\":$(date +%s)000,\"location\":\"deploy_sepolia.sh\",\"message\":\"post-build state\",\"data\":{\"target_exists\":\"$TARGET_EXISTS\",\"manifest_files\":\"$MANIFEST_FILES\",\"sample_class_hash\":\"$SAMPLE_HASH\"},\"hypothesisId\":\"H2\"}" >> "$DEBUG_LOG"
+# #endregion
+
 echo "Deploying to Sepolia..."
 # #region agent log
 log_debug "sozo migrate start" "H3" "\"step\":\"migrate\""
 # #endregion
+# Sepolia requires blake2s CASM class hash; explicit flag ensures correct hash (avoids Mismatch compiled class hash).
 MIGRATE_OUT=$(mktemp)
-if ! sozo -P sepolia migrate 2>&1 | tee "$MIGRATE_OUT"; then
+if ! sozo -P sepolia migrate --use-blake2s-casm-class-hash 2>&1 | tee "$MIGRATE_OUT"; then
   # #region agent log
   ERR_TAIL=$(tail -15 "$MIGRATE_OUT" | tr '\n' ' ' | sed 's/"/QUOTE/g')
   log_debug "sozo migrate failed" "H2" "error_tail=$ERR_TAIL"
+  # Parse mismatch hashes for root cause: class_hash_on_chain, actual_compiled, expected
+  CHAIN_HASH=$(grep -oE 'class with hash 0x[0-9a-f]+' "$MIGRATE_OUT" 2>/dev/null | sed 's/.*0x/0x/' || echo "none")
+  ACTUAL_HASH=$(grep -oE 'Actual: 0x[0-9a-f]+' "$MIGRATE_OUT" 2>/dev/null | sed 's/Actual: //' || echo "none")
+  EXPECTED_HASH=$(grep -oE 'Expected: 0x[0-9a-f]+' "$MIGRATE_OUT" 2>/dev/null | sed 's/Expected: //' || echo "none")
+  printf '%s\n' "{\"timestamp\":$(date +%s)000,\"location\":\"deploy_sepolia.sh\",\"message\":\"mismatch class hash parsed\",\"data\":{\"class_hash_on_chain\":\"$CHAIN_HASH\",\"actual_compiled\":\"$ACTUAL_HASH\",\"expected\":\"$EXPECTED_HASH\"},\"hypothesisId\":\"H2\"}" >> "$DEBUG_LOG"
   # #endregion
   rm -f "$MIGRATE_OUT"
   exit 1
 fi
 rm -f "$MIGRATE_OUT"
+
+# Exchange rate: 10 STRK for 100 coins => 10 coins per STRK (contract uses coins per STRK).
+COIN_EXCHANGE_RATE=10
+
+if [ -n "${STRK_TOKEN_ADDRESS:-}" ]; then
+  echo "Initializing coin shop (STRK_TOKEN_ADDRESS set) with exchange rate $COIN_EXCHANGE_RATE (10 STRK = 100 coins)..."
+  if sozo -P sepolia execute neon_sentinel-initialize_coin_shop initialize_coin_shop "$STRK_TOKEN_ADDRESS" "$COIN_EXCHANGE_RATE" --wait 2>&1; then
+    echo "Coin shop initialized with rate $COIN_EXCHANGE_RATE."
+  else
+    echo "Warning: initialize_coin_shop failed (e.g. already initialized). Trying update_exchange_rate..."
+    sozo -P sepolia execute neon_sentinel-update_exchange_rate update_exchange_rate "$COIN_EXCHANGE_RATE" --wait 2>&1 || true
+  fi
+else
+  echo "Setting exchange rate to $COIN_EXCHANGE_RATE (10 STRK = 100 coins)..."
+  if sozo -P sepolia execute neon_sentinel-update_exchange_rate update_exchange_rate "$COIN_EXCHANGE_RATE" --wait 2>&1; then
+    echo "Exchange rate updated to $COIN_EXCHANGE_RATE."
+  else
+    echo "Warning: update_exchange_rate failed (e.g. shop not initialized). Set STRK_TOKEN_ADDRESS in $ENV_FILE and re-run to initialize, or call initialize_coin_shop manually."
+  fi
+fi
 
 # #region agent log
 log_debug "deploy_sepolia success" "H3" "\"step\":\"done\""

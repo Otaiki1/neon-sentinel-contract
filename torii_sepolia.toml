@@ -1,0 +1,8 @@
+rpc = "https://api.cartridge.gg/x/starknet/sepolia"
+world_address = "0x07bcbeb6104a77c6c90d7285ba06c2623454a38b501554c0d1645013fe610fc1"
+start_block = 6659071
+
+[indexing]
+index_pending = true
+index_transactions = true
+polling_interval = 1000

@@ -1,0 +1,16 @@
+---
+description: Consult project skills before taking action on any task
+alwaysApply: true
+---
+
+# Consult Skills Before Acting
+
+When the user gives you a task:
+
+1. **Identify relevant skills** — Check `.agents/skills/` for skills that match the task (e.g. dojo-model for models, dojo-review for audits, controller-sessions for session keys, slot-deploy for deployment).
+
+2. **Read the skill(s)** — Open the `SKILL.md` file of each relevant skill and follow its "When to Use", "What This Skill Does", and any step-by-step or checklist guidance.
+
+3. **Then act** — Use that guidance to choose the best approach (tools, patterns, order of steps) before writing code, editing config, or running commands.
+
+If no project skill clearly applies, proceed as usual. If multiple skills apply (e.g. dojo-system + dojo-test), consult each and combine their guidance.

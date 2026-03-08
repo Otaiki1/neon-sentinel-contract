@@ -73,6 +73,9 @@ pub mod actions {
                 return;
             }
 
+            // Avoid underflow: require at least one move remaining.
+            assert(moves.remaining > 0, 'No moves left');
+
             // Deduct one from the player's remaining moves.
             moves.remaining -= 1;
 
@@ -108,9 +111,17 @@ fn next_position(mut position: Position, direction: Option<Direction>) -> Positi
     match direction {
         Option::None => { return position; },
         Option::Some(d) => match d {
-            Direction::Left => { position.vec.x -= 1; },
+            Direction::Left => {
+                if position.vec.x > 0 {
+                    position.vec.x -= 1;
+                }
+            },
             Direction::Right => { position.vec.x += 1; },
-            Direction::Up => { position.vec.y -= 1; },
+            Direction::Up => {
+                if position.vec.y > 0 {
+                    position.vec.y -= 1;
+                }
+            },
             Direction::Down => { position.vec.y += 1; },
         },
     }
